@@ -96,6 +96,8 @@ internal object TestAppConfig: Config {
     override fun metaDataProviderConfigurations(): Set<MetaDataProviderConfig> = shouldNotBeInvoked()
     override fun clock(): Clock = shouldNotBeInvoked()
     override fun canChangeAnimeIds(metaDataProviderConfig: MetaDataProviderConfig): Boolean = shouldNotBeInvoked()
+    override fun networkInterface(): String = shouldNotBeInvoked()
+    override fun ipv6Prefix(): String = shouldNotBeInvoked()
 }
 
 internal object TestPathAnimeConverter: PathAnimeConverter {

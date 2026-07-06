@@ -92,6 +92,24 @@ interface Config: ContextAware {
     fun downloadControlStateDirectory(): Directory
 
     /**
+     * Name of the network interface used for crawling, for example `eth0`.
+     * The [io.github.manamiproject.modb.app.network.NetworkController] rotates the outbound IPv6 source address on this
+     * interface whenever a metadata provider starts rate limiting requests.
+     * @since 18.0.0
+     * @return Name of the network interface.
+     */
+    fun networkInterface(): String
+
+    /**
+     * Routed IPv6 `/64` prefix available on [networkInterface] given in CIDR notation, for example
+     * `2001:db8:1234:5678::/64`. Every address within this prefix must be routed to the machine so that it can be used
+     * as an outbound source address for crawling.
+     * @since 18.0.0
+     * @return IPv6 `/64` prefix in CIDR notation.
+     */
+    fun ipv6Prefix(): String
+
+    /**
      * Determines if anime of a specific metadata provider can change their Ids.
      * This is most likely to happen if the ID is a SEO optimized title.
      * @since 1.0.0
