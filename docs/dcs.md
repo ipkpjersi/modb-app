@@ -1,7 +1,7 @@
 # Download Control State (DCS)
 
 + Anime are not downloaded once. They are checked for updates regularly
-+ Updates for [anime-offline-database](https://github.com/manami-project/anime-offline-database) are designed to be created per week
++ Updates for [anime-offline-database](https://github.com/ipkpjersi/anime-offline-database) are designed to be created per week
 + Requirement: Creating a weekly update must be possible within a day
 + Ongoing and upcoming anime have a higher tendency to change and therefore will be updated every week
 + Changes for finished anime are less likely
