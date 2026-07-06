@@ -40,9 +40,9 @@ internal class DatasetFromJsonLinesInputStreamDeserializerTest {
                 val deserializer = DatasetFromJsonLinesInputStreamDeserializer()
 
                 val expected = Dataset(
-                    `$schema` = URI("https://raw.githubusercontent.com/manami-project/anime-offline-database/refs/tags/2020-01/schemas/anime-offline-database.jsonl.schema.json"),
+                    `$schema` = URI("https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/refs/tags/2020-01/schemas/anime-offline-database.jsonl.schema.json"),
                     license = License(
-                        url = URI("https://github.com/manami-project/anime-offline-database/blob/2020-01/LICENSE"),
+                        url = URI("https://github.com/ipkpjersi/anime-offline-database/blob/2020-01/LICENSE"),
                     ),
                     lastUpdate = "2020-01-01",
                     data = listOf(
@@ -53,7 +53,7 @@ internal class DatasetFromJsonLinesInputStreamDeserializerTest {
                 )
 
                 val input = """
-                     {"${"$"}schema":"https://raw.githubusercontent.com/manami-project/anime-offline-database/refs/tags/2020-01/schemas/anime-offline-database.jsonl.schema.json","license":{"name":"Open Data Commons Open Database License (ODbL) v1.0 + Database Contents License (DbCL) v1.0","url":"https://github.com/manami-project/anime-offline-database/blob/2020-01/LICENSE"},"repository":"https://github.com/manami-project/anime-offline-database","scoreRange":{"minInclusive":1.0,"maxInclusive":10.0},"lastUpdate":"2020-01-01"}
+                     {"${"$"}schema":"https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/refs/tags/2020-01/schemas/anime-offline-database.jsonl.schema.json","license":{"name":"Open Data Commons Open Database License (ODbL) v1.0 + Database Contents License (DbCL) v1.0","url":"https://github.com/ipkpjersi/anime-offline-database/blob/2020-01/LICENSE"},"repository":"https://github.com/ipkpjersi/anime-offline-database","scoreRange":{"minInclusive":1.0,"maxInclusive":10.0},"lastUpdate":"2020-01-01"}
                      ${TestAnimeObjects.DefaultAnime.serializedMinified}
                      ${TestAnimeObjects.AllPropertiesSet.serializedMinified}
                      ${TestAnimeObjects.NullableNotSet.serializedMinified}
@@ -77,16 +77,16 @@ internal class DatasetFromJsonLinesInputStreamDeserializerTest {
                 val deserializer = DatasetFromJsonLinesInputStreamDeserializer()
 
                 val expected = Dataset(
-                    `$schema` = URI("https://raw.githubusercontent.com/manami-project/anime-offline-database/refs/tags/2020-01/schemas/anime-offline-database.jsonl.schema.json"),
+                    `$schema` = URI("https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/refs/tags/2020-01/schemas/anime-offline-database.jsonl.schema.json"),
                     license = License(
-                        url = URI("https://github.com/manami-project/anime-offline-database/blob/2020-01/LICENSE"),
+                        url = URI("https://github.com/ipkpjersi/anime-offline-database/blob/2020-01/LICENSE"),
                     ),
                     lastUpdate = "2020-01-01",
                     data = emptyList()
                 )
 
                 val input = """
-                     {"${"$"}schema":"https://raw.githubusercontent.com/manami-project/anime-offline-database/refs/tags/2020-01/schemas/anime-offline-database.jsonl.schema.json","license":{"name":"Open Data Commons Open Database License (ODbL) v1.0 + Database Contents License (DbCL) v1.0","url":"https://github.com/manami-project/anime-offline-database/blob/2020-01/LICENSE"},"repository":"https://github.com/manami-project/anime-offline-database","scoreRange":{"minInclusive":1.0,"maxInclusive":10.0},"lastUpdate":"2020-01-01"}
+                     {"${"$"}schema":"https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/refs/tags/2020-01/schemas/anime-offline-database.jsonl.schema.json","license":{"name":"Open Data Commons Open Database License (ODbL) v1.0 + Database Contents License (DbCL) v1.0","url":"https://github.com/ipkpjersi/anime-offline-database/blob/2020-01/LICENSE"},"repository":"https://github.com/ipkpjersi/anime-offline-database","scoreRange":{"minInclusive":1.0,"maxInclusive":10.0},"lastUpdate":"2020-01-01"}
                  """.trimIndent()
 
                 val inputStream = LifecycleAwareInputStream(TestReadOnceInputStream(input.byteInputStream()))

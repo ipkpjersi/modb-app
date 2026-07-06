@@ -8886,8 +8886,8 @@ internal class AnimeRawTest {
                       "animeSeason": {
                         "season": "UNDEFINED"
                       },
-                      "picture": "https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic.png",
-                      "thumbnail": "https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic_thumbnail.png",
+                      "picture": "https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic.png",
+                      "thumbnail": "https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic_thumbnail.png",
                       "scores": [],
                       "synonyms": [],
                       "studios": [],

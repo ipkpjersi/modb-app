@@ -13,6 +13,6 @@ internal class LicenseTest {
 
         // then
         assertThat(result.name).isEqualTo("Open Data Commons Open Database License (ODbL) v1.0 + Database Contents License (DbCL) v1.0")
-        assertThat(result.url).isEqualTo(URI("https://github.com/manami-project/anime-offline-database/blob/master/LICENSE"))
+        assertThat(result.url).isEqualTo(URI("https://github.com/ipkpjersi/anime-offline-database/blob/master/LICENSE"))
     }
 }

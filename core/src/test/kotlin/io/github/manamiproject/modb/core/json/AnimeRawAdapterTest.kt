@@ -114,8 +114,8 @@ internal class AnimeRawAdapterTest {
                         "season": "UNDEFINED",
                         "year": 2025
                       },
-                      "picture": "https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic.png",
-                      "thumbnail": "https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic_thumbnail.png",
+                      "picture": "https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic.png",
+                      "thumbnail": "https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic_thumbnail.png",
                       "duration": {
                         "value": 1380,
                         "unit": "SECONDS"
@@ -152,8 +152,8 @@ internal class AnimeRawAdapterTest {
                         "season": "UNDEFINED",
                         "year": 2025
                       },
-                      "picture": "https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic.png",
-                      "thumbnail": "https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic_thumbnail.png",
+                      "picture": "https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic.png",
+                      "thumbnail": "https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic_thumbnail.png",
                       "duration": {
                         "value": 1380,
                         "unit": "SECONDS"
@@ -189,8 +189,8 @@ internal class AnimeRawAdapterTest {
                         "season": "UNDEFINED",
                         "year": 2025
                       },
-                      "picture": "https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic.png",
-                      "thumbnail": "https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic_thumbnail.png",
+                      "picture": "https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic.png",
+                      "thumbnail": "https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic_thumbnail.png",
                       "duration": {
                         "value": 1380,
                         "unit": "SECONDS"
@@ -227,8 +227,8 @@ internal class AnimeRawAdapterTest {
                         "season": "UNDEFINED",
                         "year": 2025
                       },
-                      "picture": "https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic.png",
-                      "thumbnail": "https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic_thumbnail.png",
+                      "picture": "https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic.png",
+                      "thumbnail": "https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic_thumbnail.png",
                       "duration": {
                         "value": 1380,
                         "unit": "SECONDS"
@@ -264,8 +264,8 @@ internal class AnimeRawAdapterTest {
                         "season": "UNDEFINED",
                         "year": 2025
                       },
-                      "picture": "https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic.png",
-                      "thumbnail": "https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic_thumbnail.png",
+                      "picture": "https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic.png",
+                      "thumbnail": "https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic_thumbnail.png",
                       "duration": {
                         "value": 1380,
                         "unit": "SECONDS"
@@ -302,8 +302,8 @@ internal class AnimeRawAdapterTest {
                         "season": "UNDEFINED",
                         "year": 2025
                       },
-                      "picture": "https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic.png",
-                      "thumbnail": "https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic_thumbnail.png",
+                      "picture": "https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic.png",
+                      "thumbnail": "https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic_thumbnail.png",
                       "duration": {
                         "value": 1380,
                         "unit": "SECONDS"
@@ -339,8 +339,8 @@ internal class AnimeRawAdapterTest {
                         "season": "UNDEFINED",
                         "year": 2025
                       },
-                      "picture": "https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic.png",
-                      "thumbnail": "https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic_thumbnail.png",
+                      "picture": "https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic.png",
+                      "thumbnail": "https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic_thumbnail.png",
                       "duration": {
                         "value": 1380,
                         "unit": "SECONDS"
@@ -377,8 +377,8 @@ internal class AnimeRawAdapterTest {
                         "season": "UNDEFINED",
                         "year": 2025
                       },
-                      "picture": "https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic.png",
-                      "thumbnail": "https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic_thumbnail.png",
+                      "picture": "https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic.png",
+                      "thumbnail": "https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic_thumbnail.png",
                       "duration": {
                         "value": 1380,
                         "unit": "SECONDS"
@@ -414,8 +414,8 @@ internal class AnimeRawAdapterTest {
                         "season": "UNDEFINED",
                         "year": 2025
                       },
-                      "picture": "https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic.png",
-                      "thumbnail": "https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic_thumbnail.png",
+                      "picture": "https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic.png",
+                      "thumbnail": "https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic_thumbnail.png",
                       "duration": {
                         "value": 1380,
                         "unit": "SECONDS"
@@ -452,8 +452,8 @@ internal class AnimeRawAdapterTest {
                         "season": "UNDEFINED",
                         "year": 2025
                       },
-                      "picture": "https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic.png",
-                      "thumbnail": "https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic_thumbnail.png",
+                      "picture": "https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic.png",
+                      "thumbnail": "https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic_thumbnail.png",
                       "duration": {
                         "value": 1380,
                         "unit": "SECONDS"
@@ -489,8 +489,8 @@ internal class AnimeRawAdapterTest {
                         "season": "UNDEFINED",
                         "year": 2025
                       },
-                      "picture": "https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic.png",
-                      "thumbnail": "https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic_thumbnail.png",
+                      "picture": "https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic.png",
+                      "thumbnail": "https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic_thumbnail.png",
                       "duration": {
                         "value": 1380,
                         "unit": "SECONDS"
@@ -524,8 +524,8 @@ internal class AnimeRawAdapterTest {
                       "episodes": 1,
                       "status": "UNKNOWN",
                       "animeSeason": null,
-                      "picture": "https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic.png",
-                      "thumbnail": "https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic_thumbnail.png",
+                      "picture": "https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic.png",
+                      "thumbnail": "https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic_thumbnail.png",
                       "duration": {
                         "value": 1380,
                         "unit": "SECONDS"
@@ -558,8 +558,8 @@ internal class AnimeRawAdapterTest {
                       "type": "UNKNOWN",
                       "episodes": 1,
                       "status": "UNKNOWN",
-                      "picture": "https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic.png",
-                      "thumbnail": "https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic_thumbnail.png",
+                      "picture": "https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic.png",
+                      "thumbnail": "https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic_thumbnail.png",
                       "duration": {
                         "value": 1380,
                         "unit": "SECONDS"
@@ -596,8 +596,8 @@ internal class AnimeRawAdapterTest {
                         "season": null,
                         "year": 2025
                       },
-                      "picture": "https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic.png",
-                      "thumbnail": "https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic_thumbnail.png",
+                      "picture": "https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic.png",
+                      "thumbnail": "https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic_thumbnail.png",
                       "duration": {
                         "value": 1380,
                         "unit": "SECONDS"
@@ -633,8 +633,8 @@ internal class AnimeRawAdapterTest {
                       "animeSeason": {
                         "year": 2025
                       },
-                      "picture": "https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic.png",
-                      "thumbnail": "https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic_thumbnail.png",
+                      "picture": "https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic.png",
+                      "thumbnail": "https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic_thumbnail.png",
                       "duration": {
                         "value": 1380,
                         "unit": "SECONDS"
@@ -672,7 +672,7 @@ internal class AnimeRawAdapterTest {
                         "year": 2025
                       },
                       "picture": null,
-                      "thumbnail": "https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic_thumbnail.png",
+                      "thumbnail": "https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic_thumbnail.png",
                       "duration": {
                         "value": 1380,
                         "unit": "SECONDS"
@@ -709,7 +709,7 @@ internal class AnimeRawAdapterTest {
                         "season": "UNDEFINED",
                         "year": 2025
                       },
-                      "thumbnail": "https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic_thumbnail.png",
+                      "thumbnail": "https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic_thumbnail.png",
                       "duration": {
                         "value": 1380,
                         "unit": "SECONDS"
@@ -746,7 +746,7 @@ internal class AnimeRawAdapterTest {
                         "season": "UNDEFINED",
                         "year": 2025
                       },
-                      "picture": "https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic.png",
+                      "picture": "https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic.png",
                       "thumbnail": null,
                       "duration": {
                         "value": 1380,
@@ -784,7 +784,7 @@ internal class AnimeRawAdapterTest {
                         "season": "UNDEFINED",
                         "year": 2025
                       },
-                      "picture": "https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic.png",
+                      "picture": "https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic.png",
                       "duration": {
                         "value": 1380,
                         "unit": "SECONDS"
@@ -821,8 +821,8 @@ internal class AnimeRawAdapterTest {
                         "season": "UNDEFINED",
                         "year": 2025
                       },
-                      "picture": "https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic.png",
-                      "thumbnail": "https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic_thumbnail.png",
+                      "picture": "https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic.png",
+                      "thumbnail": "https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic_thumbnail.png",
                       "duration": {
                         "value": null,
                         "unit": "SECONDS"
@@ -859,8 +859,8 @@ internal class AnimeRawAdapterTest {
                         "season": "UNDEFINED",
                         "year": 2025
                       },
-                      "picture": "https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic.png",
-                      "thumbnail": "https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic_thumbnail.png",
+                      "picture": "https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic.png",
+                      "thumbnail": "https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic_thumbnail.png",
                       "duration": {
                         "unit": "SECONDS"
                       },
@@ -896,8 +896,8 @@ internal class AnimeRawAdapterTest {
                         "season": "UNDEFINED",
                         "year": 2025
                       },
-                      "picture": "https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic.png",
-                      "thumbnail": "https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic_thumbnail.png",
+                      "picture": "https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic.png",
+                      "thumbnail": "https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic_thumbnail.png",
                       "duration": {
                         "value": 1380,
                         "unit": null
@@ -934,8 +934,8 @@ internal class AnimeRawAdapterTest {
                         "season": "UNDEFINED",
                         "year": 2025
                       },
-                      "picture": "https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic.png",
-                      "thumbnail": "https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic_thumbnail.png",
+                      "picture": "https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic.png",
+                      "thumbnail": "https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic_thumbnail.png",
                       "duration": {
                         "value": 1380
                       },
@@ -971,8 +971,8 @@ internal class AnimeRawAdapterTest {
                         "season": "UNDEFINED",
                         "year": 2025
                       },
-                      "picture": "https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic.png",
-                      "thumbnail": "https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic_thumbnail.png",
+                      "picture": "https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic.png",
+                      "thumbnail": "https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic_thumbnail.png",
                       "duration": {
                         "value": 1380,
                         "unit": "SECONDS"
@@ -1009,8 +1009,8 @@ internal class AnimeRawAdapterTest {
                         "season": "UNDEFINED",
                         "year": 2025
                       },
-                      "picture": "https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic.png",
-                      "thumbnail": "https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic_thumbnail.png",
+                      "picture": "https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic.png",
+                      "thumbnail": "https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic_thumbnail.png",
                       "duration": {
                         "value": 1380,
                         "unit": "SECONDS"
@@ -1046,8 +1046,8 @@ internal class AnimeRawAdapterTest {
                         "season": "UNDEFINED",
                         "year": 2025
                       },
-                      "picture": "https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic.png",
-                      "thumbnail": "https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic_thumbnail.png",
+                      "picture": "https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic.png",
+                      "thumbnail": "https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic_thumbnail.png",
                       "duration": {
                         "value": 1380,
                         "unit": "SECONDS"
@@ -1084,8 +1084,8 @@ internal class AnimeRawAdapterTest {
                         "season": "UNDEFINED",
                         "year": 2025
                       },
-                      "picture": "https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic.png",
-                      "thumbnail": "https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic_thumbnail.png",
+                      "picture": "https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic.png",
+                      "thumbnail": "https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic_thumbnail.png",
                       "duration": {
                         "value": 1380,
                         "unit": "SECONDS"
@@ -1121,8 +1121,8 @@ internal class AnimeRawAdapterTest {
                         "season": "UNDEFINED",
                         "year": 2025
                       },
-                      "picture": "https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic.png",
-                      "thumbnail": "https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic_thumbnail.png",
+                      "picture": "https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic.png",
+                      "thumbnail": "https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic_thumbnail.png",
                       "duration": {
                         "value": 1380,
                         "unit": "SECONDS"
@@ -1159,8 +1159,8 @@ internal class AnimeRawAdapterTest {
                         "season": "UNDEFINED",
                         "year": 2025
                       },
-                      "picture": "https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic.png",
-                      "thumbnail": "https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic_thumbnail.png",
+                      "picture": "https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic.png",
+                      "thumbnail": "https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic_thumbnail.png",
                       "duration": {
                         "value": 1380,
                         "unit": "SECONDS"
@@ -1196,8 +1196,8 @@ internal class AnimeRawAdapterTest {
                         "season": "UNDEFINED",
                         "year": 2025
                       },
-                      "picture": "https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic.png",
-                      "thumbnail": "https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic_thumbnail.png",
+                      "picture": "https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic.png",
+                      "thumbnail": "https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic_thumbnail.png",
                       "duration": {
                         "value": 1380,
                         "unit": "SECONDS"
@@ -1234,8 +1234,8 @@ internal class AnimeRawAdapterTest {
                         "season": "UNDEFINED",
                         "year": 2025
                       },
-                      "picture": "https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic.png",
-                      "thumbnail": "https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic_thumbnail.png",
+                      "picture": "https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic.png",
+                      "thumbnail": "https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic_thumbnail.png",
                       "duration": {
                         "value": 1380,
                         "unit": "SECONDS"
@@ -1271,8 +1271,8 @@ internal class AnimeRawAdapterTest {
                         "season": "UNDEFINED",
                         "year": 2025
                       },
-                      "picture": "https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic.png",
-                      "thumbnail": "https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic_thumbnail.png",
+                      "picture": "https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic.png",
+                      "thumbnail": "https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic_thumbnail.png",
                       "duration": {
                         "value": 1380,
                         "unit": "SECONDS"
@@ -1309,8 +1309,8 @@ internal class AnimeRawAdapterTest {
                         "season": "UNDEFINED",
                         "year": 2025
                       },
-                      "picture": "https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic.png",
-                      "thumbnail": "https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic_thumbnail.png",
+                      "picture": "https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic.png",
+                      "thumbnail": "https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic_thumbnail.png",
                       "duration": {
                         "value": 1380,
                         "unit": "SECONDS"
@@ -1345,8 +1345,8 @@ internal class AnimeRawAdapterTest {
                     "season": "UNDEFINED",
                     "year": null
                   },
-                  "picture": "https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic.png",
-                  "thumbnail": "https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic_thumbnail.png",
+                  "picture": "https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic.png",
+                  "thumbnail": "https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic_thumbnail.png",
                   "duration": {
                     "value": 1380,
                     "unit": "SECONDS"
@@ -1380,8 +1380,8 @@ internal class AnimeRawAdapterTest {
                   "animeSeason": {
                     "season": "UNDEFINED"
                   },
-                  "picture": "https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic.png",
-                  "thumbnail": "https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic_thumbnail.png",
+                  "picture": "https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic.png",
+                  "thumbnail": "https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic_thumbnail.png",
                   "duration": {
                     "value": 1380,
                     "unit": "SECONDS"
@@ -1416,8 +1416,8 @@ internal class AnimeRawAdapterTest {
                     "season": "UNDEFINED",
                     "year": 2025
                   },
-                  "picture": "https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic.png",
-                  "thumbnail": "https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic_thumbnail.png",
+                  "picture": "https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic.png",
+                  "thumbnail": "https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic_thumbnail.png",
                   "duration": null,
                   "scores": [],
                   "synonyms": [],
@@ -1449,8 +1449,8 @@ internal class AnimeRawAdapterTest {
                     "season": "UNDEFINED",
                     "year": 2025
                   },
-                  "picture": "https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic.png",
-                  "thumbnail": "https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic_thumbnail.png",
+                  "picture": "https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic.png",
+                  "thumbnail": "https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic_thumbnail.png",
                   "scores": [],
                   "synonyms": [],
                   "studios": [],

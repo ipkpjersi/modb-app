@@ -270,8 +270,8 @@ internal class KitsuAnimeConverterTest {
                 val result = converter.convert(testFileContent)
 
                 // then
-                assertThat(result.picture).isEqualTo(URI("https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic.png"))
-                assertThat(result.thumbnail).isEqualTo(URI("https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic_thumbnail.png"))
+                assertThat(result.picture).isEqualTo(URI("https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic.png"))
+                assertThat(result.thumbnail).isEqualTo(URI("https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic_thumbnail.png"))
             }
         }
 

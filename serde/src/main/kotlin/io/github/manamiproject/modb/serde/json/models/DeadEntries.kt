@@ -15,7 +15,7 @@ import java.net.URI
 public data class DeadEntries(
     val `$schema`: URI,
     val license: License = License(),
-    val repository: String = "https://github.com/manami-project/anime-offline-database",
+    val repository: String = "https://github.com/ipkpjersi/anime-offline-database",
     val lastUpdate: String,
     val deadEntries: List<AnimeId>,
 )

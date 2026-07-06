@@ -31,9 +31,9 @@ public class DatasetJsonLinesSerializer(
         val currentWeek = WeekOfYear(LocalDate.now(clock))
 
         val metaData = DatasetMetaData(
-            `$schema` = URI("https://raw.githubusercontent.com/manami-project/anime-offline-database/refs/tags/$currentWeek/schemas/anime-offline-database.jsonl.schema.json"),
+            `$schema` = URI("https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/refs/tags/$currentWeek/schemas/anime-offline-database.jsonl.schema.json"),
             license = License().copy(
-                url = URI("https://github.com/manami-project/anime-offline-database/blob/$currentWeek/LICENSE"),
+                url = URI("https://github.com/ipkpjersi/anime-offline-database/blob/$currentWeek/LICENSE"),
             ),
             lastUpdate = LocalDate.now(clock).format(ISO_DATE),
         )

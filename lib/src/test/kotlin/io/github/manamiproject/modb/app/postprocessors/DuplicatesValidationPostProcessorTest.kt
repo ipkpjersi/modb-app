@@ -83,8 +83,8 @@ internal class DuplicatesValidationPostProcessorTest {
               episodes     = 0
               status       = UNKNOWN
               animeSeason  = AnimeSeason(season=UNDEFINED, year=0)
-              picture      = https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic.png
-              thumbnail    = https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic_thumbnail.png
+              picture      = https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic.png
+              thumbnail    = https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic_thumbnail.png
               duration     = 0 seconds
               scores       = []
               synonyms     = []
@@ -136,8 +136,8 @@ internal class DuplicatesValidationPostProcessorTest {
               episodes     = 0
               status       = UNKNOWN
               animeSeason  = AnimeSeason(season=UNDEFINED, year=0)
-              picture      = https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic.png
-              thumbnail    = https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic_thumbnail.png
+              picture      = https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic.png
+              thumbnail    = https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic_thumbnail.png
               duration     = 0 seconds
               scores       = []
               synonyms     = []
@@ -238,8 +238,8 @@ internal class DuplicatesValidationPostProcessorTest {
               episodes     = 0
               status       = UNKNOWN
               animeSeason  = AnimeSeason(season=UNDEFINED, year=0)
-              picture      = https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic.png
-              thumbnail    = https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic_thumbnail.png
+              picture      = https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic.png
+              thumbnail    = https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic_thumbnail.png
               duration     = 0 seconds
               score        = NoScore
               synonyms     = []

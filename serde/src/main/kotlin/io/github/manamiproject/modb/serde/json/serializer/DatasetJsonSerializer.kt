@@ -17,7 +17,7 @@ import java.time.format.DateTimeFormatter
 
 /**
  * Can serialize a [Collection] of [Anime] to JSON.
- * [manami-project/anime-offline-database](https://github.com/manami-project/anime-offline-database).
+ * [ipkpjersi/anime-offline-database](https://github.com/ipkpjersi/anime-offline-database).
  * The resulting list will be sorted by title, type and episodes in that order.
  * @since 6.0.0
  * @property clock Instance of a clock to determine the current date.
@@ -34,14 +34,14 @@ public class DatasetJsonSerializer(
             val currentWeek = WeekOfYear(LocalDate.now(clock))
 
             val schemaLink = when (minify) {
-                true -> URI("https://raw.githubusercontent.com/manami-project/anime-offline-database/refs/tags/$currentWeek/schemas/anime-offline-database-minified.schema.json")
-                else -> URI("https://raw.githubusercontent.com/manami-project/anime-offline-database/refs/tags/$currentWeek/schemas/anime-offline-database.schema.json")
+                true -> URI("https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/refs/tags/$currentWeek/schemas/anime-offline-database-minified.schema.json")
+                else -> URI("https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/refs/tags/$currentWeek/schemas/anime-offline-database.schema.json")
             }
 
             val data = Dataset(
                 `$schema` = schemaLink,
                 license = License().copy(
-                    url = URI("https://github.com/manami-project/anime-offline-database/blob/$currentWeek/LICENSE"),
+                    url = URI("https://github.com/ipkpjersi/anime-offline-database/blob/$currentWeek/LICENSE"),
                 ),
                 data = sortedList,
                 lastUpdate = LocalDate.now(clock).format(DateTimeFormatter.ISO_DATE),

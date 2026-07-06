@@ -10,7 +10,7 @@ plugins {
 group = "io.github.manamiproject"
 version = project.findProperty("release.version") as String? ?: ""
 
-val githubUsername = "manami-project"
+val githubUsername = "ipkpjersi"
 val kotlinVersion = org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_2_4 // most recent stable kotlin version for language and std lib
 
 repositories {
