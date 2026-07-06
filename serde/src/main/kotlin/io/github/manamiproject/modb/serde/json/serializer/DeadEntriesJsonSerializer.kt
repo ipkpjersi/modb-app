@@ -14,7 +14,7 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
 /**
- * Can serialize a [Collection] of dead entries files from [manami-project/anime-offline-database](https://github.com/manami-project/anime-offline-database).
+ * Can serialize a [Collection] of dead entries files from [ipkpjersi/anime-offline-database](https://github.com/ipkpjersi/anime-offline-database).
  * The resulting lists is duplicate free and sorted.
  * @since 6.0.0
  * @param clock Instance of a clock to determine the current date.
@@ -29,9 +29,9 @@ public class DeadEntriesJsonSerializer(
             val currentWeek = WeekOfYear(LocalDate.now(clock))
 
             val deadEntriesDocument = DeadEntries(
-                `$schema` = URI("https://raw.githubusercontent.com/manami-project/anime-offline-database/refs/tags/${currentWeek}/schemas/dead-entries.schema.json"),
+                `$schema` = URI("https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/refs/tags/${currentWeek}/schemas/dead-entries.schema.json"),
                 license = License().copy(
-                    url = URI("https://github.com/manami-project/anime-offline-database/blob/$currentWeek/LICENSE"),
+                    url = URI("https://github.com/ipkpjersi/anime-offline-database/blob/$currentWeek/LICENSE"),
                 ),
                 lastUpdate = LocalDate.now(clock).format(DateTimeFormatter.ISO_DATE),
                 deadEntries = obj.toSet().sorted(),

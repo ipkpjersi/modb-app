@@ -48,6 +48,9 @@ class DefaultReadmeCreator(
             
             # anime-offline-database
             The purpose of this repository is to create a dataset containing anime metadata aggregated by different anime metadata providers (such as myanimelist.net, anidb.net, kitsu.app and more) and allow cross-references between those metadata providers. This dataset is supposed to be used by and created for manami.
+
+            > [!NOTE]
+            > This dataset was originally created by manami-project. After the project was archived, it is now maintained by ipkpjersi to keep the project alive.
         """.trimIndent()
     }
 

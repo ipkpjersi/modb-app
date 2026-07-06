@@ -187,8 +187,8 @@ internal object TestAnimeRawObjects {
                 "season": "UNDEFINED",
                 "year": null
               },
-              "picture": "https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic.png",
-              "thumbnail": "https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic_thumbnail.png",
+              "picture": "https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic.png",
+              "thumbnail": "https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic_thumbnail.png",
               "duration": null,
               "scores": [],
               "synonyms": [],
@@ -200,7 +200,7 @@ internal object TestAnimeRawObjects {
         """.trimIndent()
 
         val serializedMinified = """
-            {"sources":[],"title":"default","type":"UNKNOWN","episodes":0,"status":"UNKNOWN","animeSeason":{"season":"UNDEFINED"},"picture":"https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic.png","thumbnail":"https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic_thumbnail.png","scores":[],"synonyms":[],"studios":[],"producers":[],"relatedAnime":[],"tags":[]}
+            {"sources":[],"title":"default","type":"UNKNOWN","episodes":0,"status":"UNKNOWN","animeSeason":{"season":"UNDEFINED"},"picture":"https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic.png","thumbnail":"https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic_thumbnail.png","scores":[],"synonyms":[],"studios":[],"producers":[],"relatedAnime":[],"tags":[]}
         """.trimIndent()
     }
 
@@ -767,8 +767,8 @@ internal object TestAnimeObjects {
                 "season": "UNDEFINED",
                 "year": null
               },
-              "picture": "https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic.png",
-              "thumbnail": "https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic_thumbnail.png",
+              "picture": "https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic.png",
+              "thumbnail": "https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic_thumbnail.png",
               "duration": null,
               "score": null,
               "synonyms": [],
@@ -780,7 +780,7 @@ internal object TestAnimeObjects {
         """.trimIndent()
 
         val serializedMinified = """
-            {"sources":[],"title":"default","type":"UNKNOWN","episodes":0,"status":"UNKNOWN","animeSeason":{"season":"UNDEFINED"},"picture":"https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic.png","thumbnail":"https://raw.githubusercontent.com/manami-project/anime-offline-database/master/pics/no_pic_thumbnail.png","synonyms":[],"studios":[],"producers":[],"relatedAnime":[],"tags":[]}
+            {"sources":[],"title":"default","type":"UNKNOWN","episodes":0,"status":"UNKNOWN","animeSeason":{"season":"UNDEFINED"},"picture":"https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic.png","thumbnail":"https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/master/pics/no_pic_thumbnail.png","synonyms":[],"studios":[],"producers":[],"relatedAnime":[],"tags":[]}
         """.trimIndent()
     }
 

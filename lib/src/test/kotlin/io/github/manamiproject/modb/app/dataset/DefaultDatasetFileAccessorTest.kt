@@ -84,7 +84,7 @@ internal class DefaultDatasetFileAccessorTest {
                     override suspend fun deserialize(source: RegularFile): Dataset {
                         invokedWith = source.fileName()
                         return Dataset(
-                            `$schema` = URI("https://raw.githubusercontent.com/manami-project/anime-offline-database/refs/heads/master/anime-offline-database.schema.json"),
+                            `$schema` = URI("https://raw.githubusercontent.com/ipkpjersi/anime-offline-database/refs/heads/master/anime-offline-database.schema.json"),
                             lastUpdate = "2020-01-01",
                             data = emptyList(),
                         )

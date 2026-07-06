@@ -12,7 +12,7 @@ version = project.findProperty("release.version") as String? ?: ""
 
 val projectName = "modb-app"
 val moduleName = "modb-core"
-val githubUsername = "manami-project"
+val githubUsername = "ipkpjersi"
 val kotlinVersion = org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_2_4 // most recent stable kotlin version for language and std lib
 
 repositories {

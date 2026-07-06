@@ -3,6 +3,9 @@
 
 _[modb](https://github.com/ipkpjersi?tab=repositories&q=modb&type=source)_ stands for _**M**anami **O**ffline **D**ata**B**ase_. The applications and libraries of this repository are used to create the [ipkpjersi/anime-offline-database](https://github.com/ipkpjersi/anime-offline-database). Don't use these libraries and applications to crawl the websites entirely. Instead, check whether the dataset already offers the data that you need.
 
+> [!NOTE]
+> This project was originally created by manami-project. After the project was archived, it is now maintained by ipkpjersi to keep the project alive.
+
 * **analyzer:** Allows to review the entries of the dataset and create merge locks.
 * **anidb:** Config, downloader and converter for [anidb.net](https://anidb.net)
 * **anilist:** Config, downloader and converter for [anilist.co](https://anilist.co)
