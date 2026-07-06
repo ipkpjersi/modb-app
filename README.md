@@ -1,7 +1,7 @@
-[![Tests](https://github.com/manami-project/modb-app/actions/workflows/tests.yml/badge.svg)](https://github.com/manami-project/modb-app/actions/workflows/tests.yml) [![codecov](https://codecov.io/gh/manami-project/modb-app/graph/badge.svg?token=66LR8JA8KE)](https://codecov.io/gh/manami-project/modb-app) ![jdk25](https://img.shields.io/badge/jdk-25-informational)
+[![Tests](https://github.com/ipkpjersi/modb-app/actions/workflows/tests.yml/badge.svg)](https://github.com/ipkpjersi/modb-app/actions/workflows/tests.yml) [![codecov](https://codecov.io/gh/ipkpjersi/modb-app/graph/badge.svg?token=66LR8JA8KE)](https://codecov.io/gh/ipkpjersi/modb-app) ![jdk25](https://img.shields.io/badge/jdk-25-informational)
 # modb-app
 
-_[modb](https://github.com/manami-project?tab=repositories&q=modb&type=source)_ stands for _**M**anami **O**ffline **D**ata**B**ase_. The applications and libraries of this repository are used to create the [manami-project/anime-offline-database](https://github.com/manami-project/anime-offline-database). Don't use these libraries and applications to crawl the websites entirely. Instead, check whether the dataset already offers the data that you need.
+_[modb](https://github.com/ipkpjersi?tab=repositories&q=modb&type=source)_ stands for _**M**anami **O**ffline **D**ata**B**ase_. The applications and libraries of this repository are used to create the [ipkpjersi/anime-offline-database](https://github.com/ipkpjersi/anime-offline-database). Don't use these libraries and applications to crawl the websites entirely. Instead, check whether the dataset already offers the data that you need.
 
 * **analyzer:** Allows to review the entries of the dataset and create merge locks.
 * **anidb:** Config, downloader and converter for [anidb.net](https://anidb.net)
@@ -51,10 +51,10 @@ _[modb](https://github.com/manami-project?tab=repositories&q=modb&type=source)_ 
 ## Getting started
 
 Setup is identical for app and analyzer.
-* Clone `https://github.com/manami-project/anime-offline-database`
+* Clone `https://github.com/ipkpjersi/anime-offline-database`
   * Run `make check-requirements` in that directory to see if you've got all requirements installed
   * Run `make init-or-reset` in that directory
-* Create a separate directory for the `*.jar` files and place the [latest releases](https://github.com/manami-project/modb-app/releases) in that directory
+* Create a separate directory for the `*.jar` files and place the [latest releases](https://github.com/ipkpjersi/modb-app/releases) in that directory
 * Create a third directory for DCS files
 * Create a fourth directory for raw download files
 * Create a [configuration file](core/README.md#configuration-management).
@@ -83,7 +83,7 @@ For more configuration options see the `README.md` files of the respective modul
 | parameter                                | type     | default                                                                     | description                                                                                                                                                                                               |
 |------------------------------------------|----------|-----------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `modb.app.downloadsDirectory`            | `String` | -                                                                           | Root directory in which the raw files and converted files are stored.                                                                                                                                     |
-| `modb.app.outputDirectory`               | `String` | -                                                                           | Target output directory. Normally this should be the directory in which you cloned the [anime-offline-database](https://github.com/manami-project/anime-offline-database)                                 |
+| `modb.app.outputDirectory`               | `String` | -                                                                           | Target output directory. Normally this should be the directory in which you cloned the [anime-offline-database](https://github.com/ipkpjersi/anime-offline-database)                                 |
 | `modb.app.downloadControlStateDirectory` | `String` | -                                                                           | Root directory of download control state files.                                                                                                                                                           |
 | `modb.app.logFileDirectory`              | `String` | A directory called `logs` within the working directory of the current week. | Defines the directory in which the logs saved.                                                                                                                                                            |
 | `modb.app.keepDownloadDirectories`       | `Long`   | `1`                                                                         | Number of download directories to keep. Download directories contain both raw data and conv files (intermediate format). Default is `1` which means that only the most recent download directory is kept. |
