@@ -54,7 +54,7 @@ class AnimePlanetLastPageDetector(
     @KoverIgnore
     private suspend fun wait() {
         excludeFromTestContext(metaDataProviderConfig) {
-            delay(random(1000, 1200).toDuration(MILLISECONDS))
+            delay(random(1000, 2000).toDuration(MILLISECONDS))
         }
     }
 

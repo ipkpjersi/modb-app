@@ -80,7 +80,7 @@ class KitsuCrawler @KoverIgnore constructor(
     @KoverIgnore
     private suspend fun wait() {
         excludeFromTestContext(metaDataProviderConfig) {
-            delay(random(1200, 1500).toDuration(MILLISECONDS))
+            delay(random(1200, 2000).toDuration(MILLISECONDS))
         }
     }
 
