@@ -625,6 +625,90 @@ internal class AppConfigTest {
     }
 
     @Nested
+    inner class NetworkInterfaceTests {
+
+        @Test
+        fun `correctly returns the network interface`() {
+            // given
+            val testConfigRegistry = object: ConfigRegistry by TestConfigRegistry {
+                override fun string(key: String): String = "eth0"
+            }
+
+            val appConfig = AppConfig(
+                configRegistry = testConfigRegistry,
+            )
+
+            // when
+            val result = appConfig.networkInterface()
+
+            // then
+            assertThat(result).isEqualTo("eth0")
+        }
+
+        @Test
+        fun `throws an exception if config property is blank`() {
+            // given
+            val testConfigRegistry = object: ConfigRegistry by TestConfigRegistry {
+                override fun string(key: String): String = "   "
+            }
+
+            val appConfig = AppConfig(
+                configRegistry = testConfigRegistry,
+            )
+
+            // when
+            val result = exceptionExpected<IllegalStateException> {
+                appConfig.networkInterface()
+            }
+
+            // then
+            assertThat(result).hasMessage("Network interface set by 'networkInterface' must not be blank.")
+        }
+    }
+
+    @Nested
+    inner class Ipv6PrefixTests {
+
+        @Test
+        fun `correctly returns the ipv6 prefix`() {
+            // given
+            val testConfigRegistry = object: ConfigRegistry by TestConfigRegistry {
+                override fun string(key: String): String = "2001:db8:1234:5678::/64"
+            }
+
+            val appConfig = AppConfig(
+                configRegistry = testConfigRegistry,
+            )
+
+            // when
+            val result = appConfig.ipv6Prefix()
+
+            // then
+            assertThat(result).isEqualTo("2001:db8:1234:5678::/64")
+        }
+
+        @Test
+        fun `throws an exception if config property is blank`() {
+            // given
+            val testConfigRegistry = object: ConfigRegistry by TestConfigRegistry {
+                override fun string(key: String): String = "   "
+            }
+
+            val appConfig = AppConfig(
+                configRegistry = testConfigRegistry,
+            )
+
+            // when
+            val result = exceptionExpected<IllegalStateException> {
+                appConfig.ipv6Prefix()
+            }
+
+            // then
+            assertThat(result).hasMessage("IPv6 prefix set by 'ipv6Prefix' must not be blank.")
+        }
+    }
+
+    @Nested
     inner class CompanionObjectTests {
 
         @Test

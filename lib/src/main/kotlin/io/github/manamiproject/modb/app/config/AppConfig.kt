@@ -51,6 +51,16 @@ class AppConfig(
         configRegistry = configRegistry,
     )
 
+    private val networkInterface: String by StringPropertyDelegate(
+        namespace = CONFIG_NAMESPACE,
+        configRegistry = configRegistry,
+    )
+
+    private val ipv6Prefix: String by StringPropertyDelegate(
+        namespace = CONFIG_NAMESPACE,
+        configRegistry = configRegistry,
+    )
+
     override fun downloadsDirectory(): Directory {
         val dir = Path(downloadsDirectory)
         check(dir.directoryExists()) { "Download directory set by 'downloadsDirectory' to [$downloadsDirectory] doesn't exist or is not a directory." }
@@ -100,6 +110,16 @@ class AppConfig(
         val dir = Path(downloadControlStateDirectory)
         check(dir.directoryExists()) { "Output directory set by 'downloadControlStateDirectory' to [$downloadControlStateDirectory] doesn't exist or is not a directory." }
         return dir
+    }
+
+    override fun networkInterface(): String {
+        check(networkInterface.isNotBlank()) { "Network interface set by 'networkInterface' must not be blank." }
+        return networkInterface
+    }
+
+    override fun ipv6Prefix(): String {
+        check(ipv6Prefix.isNotBlank()) { "IPv6 prefix set by 'ipv6Prefix' must not be blank." }
+        return ipv6Prefix
     }
 
     companion object {

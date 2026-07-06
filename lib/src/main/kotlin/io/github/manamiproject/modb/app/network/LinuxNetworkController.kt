@@ -15,55 +15,89 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit
-import java.util.concurrent.TimeoutException
+import kotlin.random.Random
 import kotlin.time.DurationUnit.SECONDS
 import kotlin.time.toDuration
 
 /**
- * Linux based network controller which allows to restart the network connection.
- * @since 1.0.0
+ * Linux based [NetworkController] which rotates the outbound IPv6 source address.
+ *
+ * The application crawls various metadata providers. To avoid being blocked by per-IP rate limiting it changes its
+ * outbound source IP address whenever a provider starts to reject requests. This implementation expects a routed IPv6
+ * `/64` to be available on the configured network interface (see [Config.ipv6Prefix]). Every address within that `/64`
+ * is routed to the machine, so a fresh random address can be used as the new outbound source at any time.
+ *
+ * A "restart" therefore does the following:
+ * 1. Add a new random address from the configured `/64` to the interface. It becomes the preferred source address.
+ * 2. On the very first restart deprecate any pre-existing global address of the `/64` (for example the static host
+ *    address) so that it is no longer used as an outbound source. Deprecated addresses stay valid for inbound traffic
+ *    such as SSH.
+ * 3. Remove the previously used rotation address. Removing it terminates its open connections and forces the crawlers
+ *    to reconnect using the new source address.
+ *
+ * Unlike a network device restart this does not bring the interface down and up, so other services running on the same
+ * machine keep their connectivity.
+ * @since 18.0.0
  * @property appConfig Application specific configuration. Uses [AppConfig] by default.
- * @property kotlinCommandExecutor Generic CLI command executor.
- * @property timeRangeForMaxRestarts Time range in seconds which in which the number of restarts defined by [maxNumberOfRestarts] is allowed.
- * @property maxNumberOfRestarts Maximum number of restarts than are allowed to occur within the time defined by [timeRangeForMaxRestarts].
- * @property timeout The actual restart is expected to be done within a given time. This property defines this time in seconds.
+ * @property commandExecutor Generic CLI command executor.
+ * @property timeRangeForMaxRestarts Time range in seconds in which the number of restarts defined by [maxNumberOfRestarts] is allowed.
+ * @property maxNumberOfRestarts Maximum number of restarts that are allowed to occur within the time defined by [timeRangeForMaxRestarts].
+ * @property ipv6AddressGenerator Creates a new random IPv6 address within the configured `/64`. Overridable for tests.
  * @throws TooManyRestartsException if the number of restarts within [timeRangeForMaxRestarts] exceeds [maxNumberOfRestarts].
- * @throws TimeoutException if the actual restart took longer to process than defined in [timeout].
  */
 class LinuxNetworkController(
     private val appConfig: Config = AppConfig.instance,
-    private val kotlinCommandExecutor: CommandExecutor = JavaProcessBuilder.instance,
+    private val commandExecutor: CommandExecutor = JavaProcessBuilder.instance,
     private val timeRangeForMaxRestarts: Seconds = 600,
     private val maxNumberOfRestarts: Int = timeRangeForMaxRestarts + timeRangeForMaxRestarts / 2,
-    private val timeout: Seconds = 15,
+    private val ipv6AddressGenerator: () -> String = { randomIpv6Address(appConfig.ipv6Prefix()) },
 ): NetworkController {
 
     private val writeLock = Mutex()
     private var isNetworkActive = true
     private val restarts = mutableListOf<LocalDateTime>()
+    private var currentRotationAddress: String? = null
+    private var hostAddressesDeprecated = false
+    private val deprecatedHostAddresses = mutableListOf<String>()
 
     /**
-     * Sudo password required to either `up` or `down` the network controller.
-     * @since 1.0.0
+     * Sudo password required to add, remove or change IPv6 addresses on the network interface.
+     * @since 18.0.0
      */
     var sudoPasswordValue = EMPTY
 
     override suspend fun restartAsync(): Deferred<Boolean> = withContext(LIMITED_NETWORK) {
         return@withContext writeLock.withLock {
-            if(!isRestartRequestValid()) {
-                log.info {"Ignoring request to restart network, because the network is already restarting or has been restarted within the last minute." }
-                return@withContext async { false }
+            if (!isRestartRequestValid()) {
+                log.info { "Ignoring request to rotate the IPv6 address, because it is already rotating or has been rotated within the last minute." }
+                return@withLock async { false }
             }
 
             isNetworkActive = false
-            log.info { "Restart for network device has been triggered." }
+            log.info { "IPv6 address rotation has been triggered." }
 
             async {
-                val device = identifyNetworkDevice()
+                val networkInterface = appConfig.networkInterface()
+                val preExistingAddresses = if (!hostAddressesDeprecated) {
+                    globalAddresses(networkInterface)
+                } else {
+                    emptyList()
+                }
+
+                val newAddress = ipv6AddressGenerator.invoke()
+                log.info { "Rotating outbound IPv6 source address to [$newAddress]." }
+                addAddress(networkInterface, newAddress)
+
                 waitForLastCallsToSucceed()
-                log.info { "Restarting internet connection by restarting network device [$device]." }
-                changeDeviceStatus(device, DeviceStatus.INACTIVE)
-                changeDeviceStatus(device, DeviceStatus.ACTIVE)
+
+                if (!hostAddressesDeprecated) {
+                    preExistingAddresses.forEach { deprecateAddress(networkInterface, it) }
+                    deprecatedHostAddresses.addAll(preExistingAddresses)
+                    hostAddressesDeprecated = true
+                }
+
+                currentRotationAddress?.let { removeAddress(networkInterface, it) }
+                currentRotationAddress = newAddress
 
                 isNetworkActive = true
                 return@async true
@@ -72,6 +106,27 @@ class LinuxNetworkController(
     }
 
     override fun isNetworkActive(): Boolean = isNetworkActive
+
+    /**
+     * Reverts the changes made to the network interface: re-promotes the previously deprecated host addresses to
+     * preferred again and removes the currently used rotation address. Intended to be called on shutdown so the machine
+     * is left in its original state after a run. Does nothing if no rotation has taken place.
+     * @since 18.0.0
+     */
+    fun restore() {
+        if (deprecatedHostAddresses.isEmpty() && currentRotationAddress == null) {
+            return
+        }
+
+        val networkInterface = appConfig.networkInterface()
+        deprecatedHostAddresses.forEach { restoreAddress(networkInterface, it) }
+        currentRotationAddress?.let { removeAddress(networkInterface, it) }
+
+        deprecatedHostAddresses.clear()
+        currentRotationAddress = null
+        hostAddressesDeprecated = false
+        log.info { "Restored the original IPv6 address configuration." }
+    }
 
     private fun isRestartRequestValid(): Boolean {
         val now = LocalDateTime.now(appConfig.clock())
@@ -101,40 +156,45 @@ class LinuxNetworkController(
         throw TooManyRestartsException(maxNumberOfRestarts, timeRangeForMaxRestarts)
     }
 
-    private fun identifyNetworkDevice(): Device {
-        log.info { "Trying to identify network device" }
+    private fun globalAddresses(networkInterface: String): List<String> {
+        val prefixBase = ipv6PrefixBase(appConfig.ipv6Prefix())
+        val output = runIp(listOf("ip", "-o", "-6", "addr", "show", "dev", networkInterface, "scope", "global"), useSudo = false)
 
-        val devices = ifconfig {
-            commandExecutor = kotlinCommandExecutor
-        }.findActive()
-        .filter { activeDevice -> activeDevice.value.any { it.contains("temporary") } }
-        .keys
-
-        check(devices.size == 1) { "Unable to find active network device." }
-        return  devices.first()
+        return INET6_REGEX.findAll(output)
+            .map { it.groupValues[1] }
+            .filter { it.substringBefore('/').startsWith(prefixBase) }
+            .toList()
     }
 
-    private suspend fun changeDeviceStatus(device: Device, status: DeviceStatus) {
-        log.info { "Setting status of device [$device] to [$status]" }
+    private fun addAddress(networkInterface: String, address: String) {
+        // `nodad` skips Duplicate Address Detection. The whole /64 is routed to this single machine, so a duplicate is
+        // impossible and DAD would only leave the address in the unusable `tentative` state for a moment, during which
+        // the kernel would keep using the old (deprecated) source address.
+        runIp(listOf("sudo", "ip", "-6", "addr", "add", "$address/64", "dev", networkInterface, "nodad"), useSudo = true)
+    }
 
-        val option = when(status) {
-            DeviceStatus.ACTIVE -> "up"
-            DeviceStatus.INACTIVE -> "down"
-        }
+    private fun removeAddress(networkInterface: String, address: String) {
+        runIp(listOf("sudo", "ip", "-6", "addr", "del", "$address/64", "dev", networkInterface), useSudo = true)
+    }
 
-        ifconfig(device, option) {
-            commandExecutor = kotlinCommandExecutor.apply {
-                config.useSudo = true
-                config.sudoPassword = sudoPasswordValue
-            }
-        }
+    private fun deprecateAddress(networkInterface: String, addressWithPrefixLength: String) {
+        runIp(listOf("sudo", "ip", "-6", "addr", "change", addressWithPrefixLength, "dev", networkInterface, "valid_lft", "forever", "preferred_lft", "0"), useSudo = true)
+    }
 
-        kotlinCommandExecutor.apply {
-            config.useSudo = false
-            config.sudoPassword = EMPTY
-        }
+    private fun restoreAddress(networkInterface: String, addressWithPrefixLength: String) {
+        runIp(listOf("sudo", "ip", "-6", "addr", "change", addressWithPrefixLength, "dev", networkInterface, "valid_lft", "forever", "preferred_lft", "forever"), useSudo = true)
+    }
 
-        waitForDeviceToBecome(device, status)
+    private fun runIp(command: List<String>, useSudo: Boolean): String {
+        commandExecutor.config.useSudo = useSudo
+        commandExecutor.config.sudoPassword = if (useSudo) sudoPasswordValue else EMPTY
+
+        val output = commandExecutor.executeCmd(command)
+
+        commandExecutor.config.useSudo = false
+        commandExecutor.config.sudoPassword = EMPTY
+
+        return output
     }
 
     private fun differenceInSeconds(previous: LocalDateTime, recent: LocalDateTime): Long {
@@ -143,34 +203,6 @@ class LinuxNetworkController(
         difference += seconds
 
         return difference
-    }
-
-    private suspend fun waitForDeviceToBecome(device: Device, status: DeviceStatus) {
-        log.info { "Waiting for device [$device] to become [$status]." }
-
-        val deviceStatus: () -> Boolean = {
-            ifconfig(device) {
-                commandExecutor = kotlinCommandExecutor
-            }.findActive().contains(device)
-        }
-
-        val isWaitCondition = when(status) {
-            DeviceStatus.ACTIVE -> { isDeviceInListOfActiveDevices: Boolean -> !isDeviceInListOfActiveDevices }
-            DeviceStatus.INACTIVE -> { isDeviceInListOfActiveDevices: Boolean -> isDeviceInListOfActiveDevices }
-        }
-
-        withTimeoutOrNull(timeout.toDuration(SECONDS)) {
-            while (isWaitCondition(deviceStatus())) {
-                wait()
-            }
-        } ?: throw TimeoutException("Timed out waiting waiting for device to change status.")
-    }
-
-    @KoverIgnore
-    private suspend fun wait() {
-        excludeFromTestContext(appConfig) {
-            delay(2.toDuration(SECONDS))
-        }
     }
 
     @KoverIgnore
@@ -182,16 +214,30 @@ class LinuxNetworkController(
 
     companion object {
         private val log by LoggerDelegate()
+        private val INET6_REGEX = """inet6\s+([0-9a-fA-F:]+/\d+)\s+scope global""".toRegex()
+
+        /**
+         * Creates a random IPv6 address within the given `/64` prefix.
+         * @since 18.0.0
+         * @param prefix IPv6 `/64` prefix in CIDR notation, for example `2001:db8:1234:5678::/64`.
+         * @return A random address within [prefix], for example `2001:db8:1234:5678:1a2b:3c4d:5e6f:7890`.
+         */
+        fun randomIpv6Address(prefix: String): String {
+            val base = ipv6PrefixBase(prefix)
+            val interfaceIdentifier = (1..4).joinToString(":") { Random.nextInt(0, 0x10000).toString(16) }
+            return "$base:$interfaceIdentifier"
+        }
+
+        private fun ipv6PrefixBase(prefix: String): String {
+            return prefix.substringBefore("::")
+                .substringBefore("/")
+                .trimEnd(':')
+        }
 
         /**
          * Singleton of [LinuxNetworkController]
-         * @since 1.0.0
+         * @since 18.0.0
          */
         val instance: LinuxNetworkController by lazy { LinuxNetworkController() }
     }
-}
-
-private enum class DeviceStatus {
-    ACTIVE,
-    INACTIVE,
 }

@@ -31,7 +31,9 @@ import kotlin.system.exitProcess
 
 @KoverIgnore
 fun main() = runCoroutine {
-    LinuxNetworkController.instance.sudoPasswordValue = passwordPrompt()
+    val networkController = LinuxNetworkController.instance
+    networkController.sudoPasswordValue = passwordPrompt()
+    Runtime.getRuntime().addShutdownHook(Thread { networkController.restore() })
 
     val rawFileConversionService = DefaultRawFileConversionService.instance
     rawFileConversionService.start()
