@@ -58,7 +58,7 @@ public class AnilistDefaultTokenRetriever(
 
         val data = extractor.extract(responseBody, selection = mapOf(
             "script" to "//script[contains(node(), $CSRF_TOKEN_PREFIX)]/node()"
-        ))
+        ), identifier = metaDataProviderConfig.hostname())
 
         return@withContext if (data.notFound("script")) {
             throw IllegalStateException("Unable to extract CSRF token.")

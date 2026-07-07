@@ -64,7 +64,8 @@ public class SimklAnimeConverter(
                 "worstRating" to "//div[@itemprop='aggregateRating']//span[@itemprop='worstRating']/text()",
                 "studios" to "//strong[text()='Studios:']/..//following-sibling::td//a/text()",
                 "producers" to "//strong[text()='Producers:']/..//following-sibling::td//a/text()",
-            )
+            ),
+            identifier = metaDataProviderConfig.hostname(),
         )
 
         val picture = extractPicture(data)

@@ -54,7 +54,7 @@ public class AnimePlanetAnimeConverter(
             "relatedAnime" to "//div[@id='tabs--relations--anime']/div//a/@href",
             "tags" to "//div[contains(@class, 'tags')]//a/text()",
             "studios" to "//a[contains(@href, '/studios/')]/text()",
-        ))
+        ), identifier = metaDataProviderConfig.hostname())
 
         val jsonld = data.string("jsonld")
         val jsonldData = jsonExtractor.extract(jsonld, mapOf(

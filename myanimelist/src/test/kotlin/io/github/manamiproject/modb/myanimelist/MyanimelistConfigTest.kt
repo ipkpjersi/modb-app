@@ -37,7 +37,7 @@ internal class MyanimelistConfigTest {
     }
 
     @Test
-    fun `build data download link correctly`() {
+    fun `build data download link points at the MAL v2 API`() {
         // given
         val id = "1535"
 
@@ -45,15 +45,15 @@ internal class MyanimelistConfigTest {
         val result = MyanimelistConfig.buildDataDownloadLink(id)
 
         // then
-        assertThat(result).isEqualTo(URI("https://myanimelist.net/anime/$id"))
+        assertThat(result).isEqualTo(URI("https://api.myanimelist.net/v2/anime/$id?fields=id,title,main_picture,alternative_titles,start_season,media_type,num_episodes,status,average_episode_duration,mean,genres,studios,related_anime"))
     }
 
     @Test
-    fun `file suffix must be html`() {
+    fun `file suffix must be json`() {
         // when
         val result = MyanimelistConfig.fileSuffix()
 
         // then
-        assertThat(result).isEqualTo("html")
+        assertThat(result).isEqualTo("json")
     }
 }

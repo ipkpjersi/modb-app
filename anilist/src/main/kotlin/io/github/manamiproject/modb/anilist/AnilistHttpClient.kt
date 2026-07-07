@@ -49,7 +49,7 @@ public class AnilistHttpClient(
             put("cookie", listOf(AnilistDefaultTokenRepository.token.cookie))
             put("x-csrf-token", listOf(AnilistDefaultTokenRepository.token.csrfToken))
         }
-        log.info { "Token has been renewed" }
+        log.info { "Anilist token has been renewed." }
 
         return modifiedHeaders
     }

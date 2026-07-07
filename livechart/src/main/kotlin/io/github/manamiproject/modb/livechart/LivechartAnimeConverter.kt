@@ -54,7 +54,7 @@ public class LivechartAnimeConverter(
             "sourceDiv" to "//div[@data-anime-details-id]/@data-anime-details-id",
             "sourceMeta" to "//meta[@property='og:url']/@content",
             "studios" to "//a[contains(@href, 'studios')]/text()",
-        ))
+        ), identifier = metaDataProviderConfig.hostname())
 
         val jsonld = data.listNotNull<String>("jsonld").first()
         val jsonldData = jsonExtractor.extract(jsonld, mapOf(

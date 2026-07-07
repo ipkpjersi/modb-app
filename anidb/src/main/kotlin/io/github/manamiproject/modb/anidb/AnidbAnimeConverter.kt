@@ -62,7 +62,7 @@ public class AnidbAnimeConverter(
             "isTimePeriod" to "//tr[contains(@class, 'year')]/td[contains(@class, 'value')]/text()",
             "datePublishedAttr" to "//span[contains(@itemprop, 'datePublished')]/@content",
             "score" to "//span[@data-label='Rating'][contains(@class, 'tmpanime')]/a/span/text()",
-        ))
+        ), identifier = metaDataProviderConfig.hostname())
 
         val picture = extractPicture(data)
 

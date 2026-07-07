@@ -192,7 +192,14 @@ public class DefaultHttpClient(
 
             when (requiresRetry(responseOrException)) {
                 true -> {
-                    log.debug { "[${request.method} ${request.url}] Requires retry." }
+                    if (attempt < retryBehavior.maxAttempts) {
+                        val reason = when (val result = responseOrException) {
+                            is HttpResponse -> "http status code [${result.code}]"
+                            is Throwable -> "[${result::class.simpleName}: ${result.message}]"
+                            else -> "an unknown result"
+                        }
+                        log.warn { "[${request.method} ${request.url}] failed with $reason - retrying (attempt ${attempt + 1} of ${retryBehavior.maxAttempts})." }
+                    }
 
                     if (responseOrException is HttpResponse) {
                         responseOrException.close()

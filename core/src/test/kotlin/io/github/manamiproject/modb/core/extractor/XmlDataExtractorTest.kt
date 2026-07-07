@@ -77,4 +77,36 @@ internal class XmlDataExtractorTest {
             assertThat(result.string("result")).contains("window.GRECAPTCHA_SITE_KEY")
         }
     }
+
+    @Test
+    fun `extract with identifier produces the same result as the fallback path`() {
+        runTest {
+            // given
+            val testFileContent = """
+                <!DOCTYPE html>
+                <html>
+                <head>
+                <title>Unit test</title>
+                <script>
+                window.GRECAPTCHA_SITE_KEY = '6Ld_1aIZAAAAAF6bNdR67ICKIaeXLKlbhE7t2Qz4';
+                </script>
+                </head>
+                <body>
+                Test
+                </body>
+                </html>
+            """.trimIndent()
+            val selectorThatForcesExceptionOnJsoupCssDataExtractor = "node()"
+
+            // when
+            val result = XmlDataExtractor.extract(
+                testFileContent,
+                mapOf("result" to selectorThatForcesExceptionOnJsoupCssDataExtractor),
+                identifier = "example.org",
+            )
+
+            // then
+            assertThat(result.string("result")).contains("window.GRECAPTCHA_SITE_KEY")
+        }
+    }
 }
