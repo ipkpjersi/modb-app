@@ -117,7 +117,7 @@ fun startFlaresolverr(config: FlaresolverrActionConfig.() -> Unit = { }): String
         "--rm",
         "--name=flaresolverr-${LocalDateTime.now(currentConfig.clock).format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))}",
         "-p",
-        "${currentConfig.port}:8191",
+        "127.0.0.1:${currentConfig.port}:8191", // bind to localhost only - never expose FlareSolverr publicly (open-proxy abuse risk)
         "-e",
         "LOG_LEVEL=${currentConfig.logLevel}",
         FLARESOLVERR_IMAGE,
