@@ -67,6 +67,8 @@ internal class ConfigTest {
                 override fun workingDir(metaDataProviderConfig: MetaDataProviderConfig): Directory = shouldNotBeInvoked()
                 override fun outputDirectory(): Directory = shouldNotBeInvoked()
                 override fun downloadControlStateDirectory(): Directory = shouldNotBeInvoked()
+                override fun networkInterface(): String = shouldNotBeInvoked()
+                override fun ipv6Prefix(): String = shouldNotBeInvoked()
             }
 
             // when
@@ -91,6 +93,8 @@ internal class ConfigTest {
                 override fun workingDir(metaDataProviderConfig: MetaDataProviderConfig): Directory = shouldNotBeInvoked()
                 override fun outputDirectory(): Directory = shouldNotBeInvoked()
                 override fun downloadControlStateDirectory(): Directory = shouldNotBeInvoked()
+                override fun networkInterface(): String = shouldNotBeInvoked()
+                override fun ipv6Prefix(): String = shouldNotBeInvoked()
             }
 
             // when
@@ -113,6 +117,8 @@ internal class ConfigTest {
                 override fun workingDir(metaDataProviderConfig: MetaDataProviderConfig): Directory = shouldNotBeInvoked()
                 override fun outputDirectory(): Directory = shouldNotBeInvoked()
                 override fun downloadControlStateDirectory(): Directory = shouldNotBeInvoked()
+                override fun networkInterface(): String = shouldNotBeInvoked()
+                override fun ipv6Prefix(): String = shouldNotBeInvoked()
             }
 
             // when
@@ -135,6 +141,8 @@ internal class ConfigTest {
                 override fun workingDir(metaDataProviderConfig: MetaDataProviderConfig): Directory = shouldNotBeInvoked()
                 override fun outputDirectory(): Directory = shouldNotBeInvoked()
                 override fun downloadControlStateDirectory(): Directory = shouldNotBeInvoked()
+                override fun networkInterface(): String = shouldNotBeInvoked()
+                override fun ipv6Prefix(): String = shouldNotBeInvoked()
             }
 
             // when
@@ -157,6 +165,8 @@ internal class ConfigTest {
                 override fun workingDir(metaDataProviderConfig: MetaDataProviderConfig): Directory = shouldNotBeInvoked()
                 override fun outputDirectory(): Directory = shouldNotBeInvoked()
                 override fun downloadControlStateDirectory(): Directory = shouldNotBeInvoked()
+                override fun networkInterface(): String = shouldNotBeInvoked()
+                override fun ipv6Prefix(): String = shouldNotBeInvoked()
             }
 
             // when
@@ -188,6 +198,8 @@ internal class ConfigTest {
                 override fun workingDir(metaDataProviderConfig: MetaDataProviderConfig): Directory = shouldNotBeInvoked()
                 override fun outputDirectory(): Directory = shouldNotBeInvoked()
                 override fun downloadControlStateDirectory(): Directory = shouldNotBeInvoked()
+                override fun networkInterface(): String = shouldNotBeInvoked()
+                override fun ipv6Prefix(): String = shouldNotBeInvoked()
             }
 
             // when
@@ -214,6 +226,8 @@ internal class ConfigTest {
                 override fun workingDir(metaDataProviderConfig: MetaDataProviderConfig): Directory = shouldNotBeInvoked()
                 override fun outputDirectory(): Directory = shouldNotBeInvoked()
                 override fun downloadControlStateDirectory(): Directory = shouldNotBeInvoked()
+                override fun networkInterface(): String = shouldNotBeInvoked()
+                override fun ipv6Prefix(): String = shouldNotBeInvoked()
             }
 
             // when
@@ -237,6 +251,8 @@ internal class ConfigTest {
                 override fun workingDir(metaDataProviderConfig: MetaDataProviderConfig): Directory = shouldNotBeInvoked()
                 override fun outputDirectory(): Directory = shouldNotBeInvoked()
                 override fun downloadControlStateDirectory(): Directory = shouldNotBeInvoked()
+                override fun networkInterface(): String = shouldNotBeInvoked()
+                override fun ipv6Prefix(): String = shouldNotBeInvoked()
             }
 
             // when

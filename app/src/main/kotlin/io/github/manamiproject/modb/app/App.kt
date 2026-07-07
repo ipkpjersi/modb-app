@@ -17,6 +17,8 @@ import io.github.manamiproject.modb.app.downloadcontrolstate.DefaultDownloadCont
 import io.github.manamiproject.modb.app.extensions.alertDeletedAnimeByTitle
 import io.github.manamiproject.modb.app.fluentapi.*
 import io.github.manamiproject.modb.app.network.LinuxNetworkController
+import io.github.manamiproject.modb.app.network.startFlaresolverr
+import io.github.manamiproject.modb.app.network.stopFlaresolverr
 import io.github.manamiproject.modb.app.postprocessors.*
 import io.github.manamiproject.modb.core.coroutines.CoroutineManager.runCoroutine
 import io.github.manamiproject.modb.core.coroutines.ModbDispatchers.LIMITED_NETWORK
@@ -34,14 +36,18 @@ fun main() = runCoroutine {
     val networkController = LinuxNetworkController.instance
     networkController.sudoPasswordValue = passwordPrompt()
     Runtime.getRuntime().addShutdownHook(Thread { networkController.restore() })
+    val flaresolverrContainerId = startFlaresolverr()
 
     val rawFileConversionService = DefaultRawFileConversionService.instance
     rawFileConversionService.start()
 
     withContext(LIMITED_NETWORK) {
-        launch { AnidbCrawler.instance.start() }
+        // anidb and anime-planet are disabled: FlareSolverr solves their Cloudflare challenge but they also
+        // block this host's datacenter IP. They stay off until the reverse SSH tunnel provides a residential
+        // exit (which will route FlareSolverr's traffic). The FlareSolverr wiring is already in place for them.
+        // launch { AnidbCrawler.instance.start() }
         launch { AnilistCrawler.instance.start() }
-        launch { AnimePlanetCrawler.instance.start() }
+        // launch { AnimePlanetCrawler.instance.start() }
         launch { AnimenewsnetworkCrawler.instance.start() }
         launch { AnisearchCrawler(metaDataProviderConfig = AnisearchConfig).start() }
         launch { AnisearchCrawler(metaDataProviderConfig = AnisearchRelationsConfig).start() }
@@ -53,6 +59,8 @@ fun main() = runCoroutine {
 
     rawFileConversionService.waitForAllRawFilesToBeConverted()
     rawFileConversionService.shutdown()
+
+    stopFlaresolverr(flaresolverrContainerId)
 
     DefaultDownloadControlStateUpdater.instance.updateAll()
     DefaultDownloadControlStateAccessor.instance.allAnime()
