@@ -82,7 +82,7 @@ internal class MyanimelistCrawlerTest {
 
                 // then
                 testIdRangeSelector.idDownloadList().forEach { id ->
-                    val result = tempDir.resolve("$id.html").readFile()
+                    val result = tempDir.resolve("$id.${testMetaDataProviderConfig.fileSuffix()}").readFile()
                     assertThat(result).isEqualTo("$successfulEntry $id")
                 }
             }

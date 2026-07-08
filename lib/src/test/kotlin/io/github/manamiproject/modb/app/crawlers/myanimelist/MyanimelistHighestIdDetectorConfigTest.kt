@@ -48,11 +48,11 @@ internal class MyanimelistHighestIdDetectorConfigTest {
     }
 
     @Test
-    fun `file suffix must be html`() {
+    fun `file suffix must be json`() {
         // when
         val result = MyanimelistConfig.fileSuffix()
 
         // then
-        assertThat(result).isEqualTo("html")
+        assertThat(result).isEqualTo("json")
     }
 }
