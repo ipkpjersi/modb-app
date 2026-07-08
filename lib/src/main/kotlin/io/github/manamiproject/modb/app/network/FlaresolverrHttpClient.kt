@@ -98,13 +98,13 @@ internal class FlaresolverrHttpClient(
                 )
                 Json.parseJson<FlaresolverrResponse>(postResponse.bodyAsStream())!!
             } catch (throwable: Throwable) {
-                log.warn { "FlareSolverr request for [$targetUrl] failed: [${throwable.message}]." }
+                log.warn { "FlareSolverr request for [$targetUrl] sent via [$flaresolverrUrl] failed: [${throwable.message}]." }
                 throw throwable
             }
 
             if (!content.status.equals("ok", ignoreCase = true)) {
                 log.warn {
-                    "FlareSolverr request for [$targetUrl] was not successful - FlareSolverr status [${content.status}], message [${content.message}]."
+                    "FlareSolverr request for [$targetUrl] sent via [$flaresolverrUrl] was not successful - FlareSolverr status [${content.status}], message [${content.message}]."
                 }
             }
 
