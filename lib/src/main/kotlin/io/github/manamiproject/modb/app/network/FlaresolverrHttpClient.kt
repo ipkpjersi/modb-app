@@ -10,6 +10,7 @@ import io.github.manamiproject.modb.core.httpclient.HttpResponse
 import io.github.manamiproject.modb.core.httpclient.RequestBody
 import io.github.manamiproject.modb.core.httpclient.RetryCase
 import io.github.manamiproject.modb.core.json.Json
+import io.github.manamiproject.modb.core.logging.LoggerDelegate
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withTimeout
@@ -54,49 +55,59 @@ internal class FlaresolverrHttpClient(
         url: URL,
         requestBody: RequestBody,
         headers: Map<String, Collection<String>>,
-    ): HttpResponse = withOperationTimeout {
-        flaresolverrSemaphore.withPermit {
-            val postResponse = httpClient.post(
-                url = flaresolverrUrl,
-                requestBody = RequestBody(
-                    mediaType = "application/x-www-form-urlencoded",
-                    body = """
-                        {
-                          "cmd": "request.post",
-                          "url": "$url",
-                          "maxTimeout": $maxTimeout,
-                          "postData": "${requestBody.body}"
-                        }
-                    """.trimIndent(),
-                ),
-            )
-            val content = Json.parseJson<FlaresolverrResponse>(postResponse.bodyAsStream())!!
-            HttpResponse(
-                code = content.solution.status,
-                body = content.solution.response,
-            )
-        }
+    ): HttpResponse = sendToFlaresolverr(url) {
+        """
+            {
+              "cmd": "request.post",
+              "url": "$url",
+              "maxTimeout": $maxTimeout,
+              "postData": "${requestBody.body}"
+            }
+        """.trimIndent()
     }
 
     override suspend fun get(
         url: URL,
         headers: Map<String, Collection<String>>,
-    ): HttpResponse = withOperationTimeout {
+    ): HttpResponse = sendToFlaresolverr(url) {
+        """
+            {
+              "cmd": "request.get",
+              "url": "$url",
+              "maxTimeout": $maxTimeout
+            }
+        """.trimIndent()
+    }
+
+    /**
+     * Sends a command to FlareSolverr for [targetUrl] and unwraps its solution.
+     *
+     * All FlareSolverr traffic must be sent as [APPLICATION_JSON] - any other content type makes FlareSolverr reject
+     * the body with "Request parameter 'cmd' is mandatory" (HTTP 500), so both [post] and [get] funnel through here.
+     *
+     * Every failure is logged against [targetUrl] (and includes FlareSolverr's own status/message), so the crawl log
+     * alone identifies which provider's request failed - the underlying [httpClient] only ever sees the opaque
+     * `localhost:<port>/v1` endpoint and cannot attribute the failure to a provider.
+     */
+    private suspend fun sendToFlaresolverr(targetUrl: URL, buildBody: () -> String): HttpResponse = withOperationTimeout {
         flaresolverrSemaphore.withPermit {
-            val postResponse = httpClient.post(
-                url = flaresolverrUrl,
-                requestBody = RequestBody(
-                    mediaType = APPLICATION_JSON,
-                    body = """
-                        {
-                          "cmd": "request.get",
-                          "url": "$url",
-                          "maxTimeout": $maxTimeout
-                        }
-                    """.trimIndent(),
-                ),
-            )
-            val content = Json.parseJson<FlaresolverrResponse>(postResponse.bodyAsStream())!!
+            val content = try {
+                val postResponse = httpClient.post(
+                    url = flaresolverrUrl,
+                    requestBody = RequestBody(mediaType = APPLICATION_JSON, body = buildBody()),
+                )
+                Json.parseJson<FlaresolverrResponse>(postResponse.bodyAsStream())!!
+            } catch (throwable: Throwable) {
+                log.warn { "FlareSolverr request for [$targetUrl] failed: [${throwable.message}]." }
+                throw throwable
+            }
+
+            if (!content.status.equals("ok", ignoreCase = true)) {
+                log.warn {
+                    "FlareSolverr request for [$targetUrl] was not successful - FlareSolverr status [${content.status}], message [${content.message}]."
+                }
+            }
+
             HttpResponse(
                 code = content.solution.status,
                 body = content.solution.response,
@@ -110,6 +121,8 @@ internal class FlaresolverrHttpClient(
     }
 
     companion object {
+        private val log by LoggerDelegate()
+
         /**
          * Seconds added on top of FlareSolverr's own `maxTimeout` (converted to seconds) to derive the socket read
          * timeout of the underlying HTTP client, so a legitimate slow solve is never cut off by a socket read timeout.
@@ -139,6 +152,8 @@ internal class FlaresolverrHttpClient(
 }
 
 private data class FlaresolverrResponse(
+    val status: String = EMPTY,
+    val message: String = EMPTY,
     val solution: FlaresolverrResponseSolution = FlaresolverrResponseSolution(),
 )
 

@@ -90,7 +90,7 @@ internal class FlaresolverrHttpClientTest {
                 // then
                 assertThat(invokedUrl).isEqualTo("http://localhost:8191/v1")
                 assertThat(invokedRequestBody).isEqualTo("""
-                    RequestBody(mediaType=application/x-www-form-urlencoded, body={
+                    RequestBody(mediaType=application/json, body={
                       "cmd": "request.post",
                       "url": "http://example.org",
                       "maxTimeout": 120000,
