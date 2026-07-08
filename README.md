@@ -100,7 +100,7 @@ Rotation is wired into a subset of scrapers only:
 | scraper       | triggers IP rotation |
 |---------------|----------------------|
 | anisearch     | yes                  |
-| anidb         | yes                  |
+| anidb         | yes (see note)       |
 | anilist       | no                   |
 | kitsu         | no                   |
 | myanimelist   | no                   |
@@ -115,3 +115,5 @@ When rotation happens it is logged at `INFO`:
 IPv6 address rotation has been triggered.
 Rotating outbound IPv6 source address to [<address>].
 ```
+
+> **Note on anidb:** rotation must be removed from anidb once it is routed through the residential reverse SSH tunnel. On the tunnel its traffic exits via a fixed home IP that cannot (and should not) be rotated, and `restartAsync()` rotates the *shared* datacenter interface — so rotating on anidb's behalf would disrupt anisearch and the other providers that still exit via the datacenter IP. anisearch stays on the datacenter IP and keeps rotation.
