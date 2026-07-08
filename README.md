@@ -90,3 +90,28 @@ For more configuration options see the `README.md` files of the respective modul
 | `modb.app.downloadControlStateDirectory` | `String` | -                                                                           | Root directory of download control state files.                                                                                                                                                           |
 | `modb.app.logFileDirectory`              | `String` | A directory called `logs` within the working directory of the current week. | Defines the directory in which the logs saved.                                                                                                                                                            |
 | `modb.app.keepDownloadDirectories`       | `Long`   | `1`                                                                         | Number of download directories to keep. Download directories contain both raw data and conv files (intermediate format). Default is `1` which means that only the most recent download directory is kept. |
+
+## IP rotation
+
+Some sites throttle or block individual source addresses, so the app can rotate its outbound IPv6 source address (via `LinuxNetworkController`, using the `modb.app.networkInterface` and `modb.app.ipv6Prefix` configuration) and retry. Rotation is triggered **only** by connection-level failures — `ConnectException`, `UnknownHostException` and `NoRouteToHostException`. HTTP-level bans (e.g. `403`/`429`) are retried on the same address and do **not** rotate.
+
+Rotation is wired into a subset of scrapers only:
+
+| scraper       | triggers IP rotation |
+|---------------|----------------------|
+| anisearch     | yes                  |
+| anidb         | yes                  |
+| anilist       | no                   |
+| kitsu         | no                   |
+| myanimelist   | no                   |
+| livechart     | no                   |
+| animenewsnetwork | no                |
+| simkl         | no                   |
+| anime-planet  | no                   |
+
+When rotation happens it is logged at `INFO`:
+
+```
+IPv6 address rotation has been triggered.
+Rotating outbound IPv6 source address to [<address>].
+```
