@@ -17,6 +17,11 @@ on:
       - .github/workflows/**
       - "!.github/workflows/tests.yml"
 
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
+
 jobs:
   tests:
     runs-on: ubuntu-latest
