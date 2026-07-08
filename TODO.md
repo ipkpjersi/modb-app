@@ -41,16 +41,10 @@ fetches) through a reverse SSH tunnel to a residential connection.
 
 ## Smaller follow-ups
 
-- **Fix the CI tests failing on GitHub.** The committed MAL v2 migration (`02a8e3a`) left two
-  stale tests red, so CI on `feature/flaresolverr` is failing: `MyanimelistHighestIdDetectorConfigTest`
-  still asserts `fileSuffix() == "html"` (v2 returns `"json"`), and `MyanimelistCrawlerTest`
-  reads back `$id.html` (crawler now writes `$id.json`). Local fixes exist (uncommitted) — commit +
-  push them so CI goes green. (Latent core bug also spotted: `PathExtensions.readFile` throws
-  `NoSuchFileException(this.toString())` inside `withContext`, so the message is the coroutine scope,
-  not the missing path — worth fixing separately for debuggability.)
-- **Commit + push** the current `feature/flaresolverr` work: FlareSolverr localhost binding
-  (security), MAL v2 API migration, HTTP retry-attempt logging, XML-extractor provider
-  attribution, Anilist token-log wording, and `scripts/dl-status.sh`.
+- **Latent core bug** (spotted during the FlareSolverr work, not yet fixed): `PathExtensions.readFile`
+  throws `NoSuchFileException(this.toString())` inside `withContext`, so the exception message is the
+  coroutine scope (e.g. `DispatchedCoroutine{Active}@...`), not the missing file path — misleading when
+  debugging. Fix separately.
 - **Harden `scripts/check-all-providers.sh`:** add a provider-name filter (run just a subset),
   a `FS_PORT` override so its FlareSolverr can't contend with a live crawl's single browser
   (avoids a 500 that would fail-fast the running crawl), and bind its container to `127.0.0.1`
