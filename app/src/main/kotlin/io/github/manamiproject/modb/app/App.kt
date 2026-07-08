@@ -42,8 +42,8 @@ fun main() = runCoroutine {
     rawFileConversionService.start()
 
     withContext(LIMITED_NETWORK) {
-        // anidb and anime-planet are disabled: FlareSolverr solves their Cloudflare challenge but they also
-        // block this host's datacenter IP. They stay off until the reverse SSH tunnel provides a residential
+        // anidb, anime-planet and simkl are disabled: FlareSolverr solves their Cloudflare challenge but they
+        // also block this host's datacenter IP. They stay off until the reverse SSH tunnel provides a residential
         // exit (which will route FlareSolverr's traffic). The FlareSolverr wiring is already in place for them.
         // launch { AnidbCrawler.instance.start() }
         launch { AnilistCrawler.instance.start() }
@@ -54,7 +54,7 @@ fun main() = runCoroutine {
         launch { KitsuCrawler.instance.start() }
         launch { LivechartCrawler.instance.start() }
         launch { MyanimelistCrawler.instance.start() }
-        launch { SimklCrawler.instance.start() }
+        // launch { SimklCrawler.instance.start() }
     }.join()
 
     rawFileConversionService.waitForAllRawFilesToBeConverted()
