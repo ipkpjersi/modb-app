@@ -1,5 +1,6 @@
 package io.github.manamiproject.modb.app.network
 
+import io.github.manamiproject.modb.app.TestAppConfig
 import io.github.manamiproject.modb.app.TestHttpClient
 import io.github.manamiproject.modb.core.extensions.EMPTY
 import io.github.manamiproject.modb.core.httpclient.HttpClient
@@ -38,7 +39,7 @@ internal class FlaresolverrHttpClientTest {
                         )
                     }
                 }
-                val flaresolverrHttpClient = FlaresolverrHttpClient(httpClient = testHttpClient)
+                val flaresolverrHttpClient = FlaresolverrHttpClient(appConfig = TestAppConfig, httpClient = testHttpClient)
 
                 // when
                 flaresolverrHttpClient.get(URI("http://example.org").toURL())
@@ -75,7 +76,7 @@ internal class FlaresolverrHttpClientTest {
                         )
                     }
                 }
-                val flaresolverrHttpClient = FlaresolverrHttpClient(httpClient = testHttpClient)
+                val flaresolverrHttpClient = FlaresolverrHttpClient(appConfig = TestAppConfig, httpClient = testHttpClient)
 
                 // when
                 flaresolverrHttpClient.post(
@@ -113,7 +114,7 @@ internal class FlaresolverrHttpClientTest {
                     return this
                 }
             }
-            val flaresolverrHttpClient = FlaresolverrHttpClient(httpClient = testHttpClient)
+            val flaresolverrHttpClient = FlaresolverrHttpClient(appConfig = TestAppConfig, httpClient = testHttpClient)
 
             val r1 = HttpResponseRetryCase { true }
             val r2 = ThrowableRetryCase { true }
