@@ -201,6 +201,12 @@ object Analyzer {
 
         AnsiTable.instance.printTable(diffTableEntries(currentEntry))
 
+        if (currentEntryUris.size == 1) {
+            println("\n[keep] (= same anime, merge/lock together)    [a valid URL] (= add a source to the group)    [check] (= unique anime, never merge)    [skip] (= decide later)    [exit] (= back to main menu)")
+        } else {
+            println("\n[keep] (= same anime, merge/lock together)    [a valid URL] (= add a source to the group)    [skip] (= decide later)    [exit] (= back to main menu)")
+        }
+
         print("\nOption: ")
         val input = waitForUserInput()
         val cleanedUpUrl = toCleanedUpUrl(input)

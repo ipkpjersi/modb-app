@@ -200,3 +200,98 @@ The practical consequences are:
 
 Note also that a fork's higher raw entry count vs. upstream is a **mix** of genuinely new anime and unmerged
 duplicates — it is not one-for-one duplicates.
+
+### Reviewing entries (the analyzer)
+
+Review is done through the **analyzer**, a separate interactive terminal program — not by hand-editing
+`merge.lock`. It reads the same `config.toml` as the app, so it points at the same dataset
+(`modb.app.outputDirectory`) and the same DCS directory (`modb.app.downloadControlStateDirectory`). Run:
+
+```
+java -Djava.net.preferIPv6Addresses=true -Djava.net.preferIPv4Stack=false -jar modb-analyzer.jar
+```
+
+> **Needs a desktop/GUI.** For each entry the analyzer opens the candidate provider pages in your browser
+> (`java.awt.Desktop.browse`). On a headless server that step is skipped with a warning, so review is
+> effectively a workstation task.
+
+It loads the finished dataset into memory and shows a menu:
+
+```
+[1] Show unseen duplicates          [c] Check merge locks
+[2] Show cluster sizes              [d] Mark as dead entry
+[3] Show DCS statistics             [l] Load anime manually
+                                    [n] Create a merge lock from scratch
+                                    [a] Add a URL to an existing merge lock
+[r] Reprocess merging               [q] quit
+```
+
+A **cluster** is the set of entries that have the same *number* of `sources`. The normal workflow is:
+
+1. **`[2] Show cluster sizes`** — prints, per cluster, the total entries and how many are still
+   **unreviewed**. This is your backlog. Cluster `1` (single-source entries) is where most of the
+   split-anime duplicates live.
+2. **`[c] Check merge locks`** — pick a cluster and it walks you through each *unreviewed* entry in it
+   (entries already covered by a merge lock or `checked-isolated-entries.txt` are filtered out). For each
+   one it opens the URLs in your browser and prints a side-by-side diff table, then prompts `Option:`.
+   Type one of:
+   * **`keep`** — these sources ARE the same anime -> writes a merge lock group (force-merged forever after).
+   * **a pasted provider URL** — add another provider's entry to the group you are building, then re-prompt.
+   * **`check`** — (single-source entries only) confirm it is genuinely standalone -> appends it to
+     `checked-isolated-entries.txt`.
+   * **`skip`** — undecided; writes nothing, so it reappears next time.
+   * **`exit`** — back to the main menu.
+
+   In plain English: **`keep` = "these are the same anime, merge/lock them together"**, and **`check` =
+   "this single entry is a unique anime, never merge it with anything"**. To merge a duplicate you first
+   paste the other provider's URL (which adds it to the group on screen), then type `keep` to lock the
+   combined group. Typing `keep` on an entry you did not add anything to simply confirms and locks its
+   current sources as-is.
+
+**Two different "duplicate" notions** — don't confuse them. They are *opposite* failure directions:
+
+* **Split anime** (under-merged; the common ~thousands case): the same real anime exists as **two separate
+  entries** because the automatic 80% title matcher never linked them. Each entry looks valid on its own
+  (at most one ID per provider) — they just should have been one. This is a problem *across two rows*.
+  Example:
+
+  ```
+  Entry A:  https://myanimelist.net/anime/1535   (title "Death Note")
+  Entry B:  https://anilist.co/anime/1535        (title "DEATH NOTE (2006)")
+  ```
+
+  Found via `[2] Show cluster sizes` (they inflate the low-source clusters) and fixed in `[c]` by pasting
+  the other URL and typing `keep`.
+
+* **`[1] Show unseen duplicates`** (over-merged): a *different* report — one entry that contains **two or
+  more IDs from the same provider**. An entry should have at most one ID per provider, so this means two
+  different anime got fused into one entry (usually a bad cross-provider link). This is a problem *inside
+  one row*. Example:
+
+  ```
+  One entry whose sources are:
+    https://myanimelist.net/anime/1535
+    https://myanimelist.net/anime/99999   <- two MAL IDs in ONE entry
+    https://kitsu.app/anime/1376
+  ```
+
+  "unseen" just means "not yet covered by a merge lock". Fixing an over-merge needs a **split**, which only
+  review can do — a downstream "merge" in a consuming app cannot undo it.
+
+|                              | inside one entry or across entries? | direction     | what it means            | fix                         |
+|------------------------------|-------------------------------------|---------------|--------------------------|-----------------------------|
+| **Split anime**              | same anime across **two** entries   | under-merged  | not combined when it should be | `keep` to merge/lock them |
+| **Unseen duplicates** `[1]`  | same provider **twice in one** entry| over-merged   | two anime fused into one | **split** (review only)     |
+
+At 0% reviewed a fork has lots of the first kind (harmless, just redundant entries) and few of the second.
+
+**Decisions persist; indecision does not.** `keep` and `check` write to `merge.lock` /
+`checked-isolated-entries.txt` in the DCS directory and are reused by every future run of both the app and
+the analyzer, so a reviewed entry never comes back. Only `skip` is transient. You therefore review each
+ambiguous entry **once**, not every run.
+
+**What a review run writes.** After finishing a cluster (or via `[r] Reprocess merging`) the analyzer
+re-runs merging with your new locks and then **rewrites the dataset files and regenerates the dataset
+`README.md`** — including the `N% reviewed` figure and the per-provider entry counts — in
+`modb.app.outputDirectory`. This is a **delta update only**: it does *not* bump `week.release` or create a
+GitHub release (that only happens on a full weekly app run).
