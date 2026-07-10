@@ -380,3 +380,6 @@ gradle-app.setting
 *.hprof
 
 # End of https://www.toptal.com/developers/gitignore/api/linux,macos,gradle,kotlin,windows,intellij,intellij+all,intellij+iml,visualstudiocode
+
+# CUSTOM
+discord-webhook.txt
