@@ -34,8 +34,13 @@ their Cloudflare JS challenge but not the datacenter-range ban. They need a **re
 fetches) through a reverse SSH tunnel to a residential connection.
 - **Provider-scoped:** only residential-required providers use the tunnel; everyone else keeps the
   direct datacenter path.
-- Likely also needed for **simkl** if/when it range-bans (currently works via FlareSolverr).
-- Once in place, re-enable anidb/anime-planet (uncomment their launches / mark enabled via item 1).
+- **simkl** is now confirmed to need the tunnel too (datacenter IP banned even via FlareSolverr) and is
+  currently commented out in `App.kt`.
+- **anisearch** is also confirmed datacenter-IP-banned (2026-07-09) and commented out. Unlike the others
+  it is a direct-scrape provider (no FlareSolverr): from the server every port is TCP-refused, while from
+  a residential IP the crawler's exact request (browser UA + headers) returns 200. So the tunnel will fix
+  it with no other change — verified, not assumed.
+- Once in place, re-enable anidb/anime-planet/simkl/anisearch (uncomment their launches / mark enabled via item 1).
 
 **Depends on item 1** — needs per-provider routing + enable control to be practical.
 

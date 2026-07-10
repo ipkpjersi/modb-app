@@ -49,8 +49,13 @@ fun main() = runCoroutine {
         launch { AnilistCrawler.instance.start() }
         // launch { AnimePlanetCrawler.instance.start() }
         launch { AnimenewsnetworkCrawler.instance.start() }
-        launch { AnisearchCrawler(metaDataProviderConfig = AnisearchConfig).start() }
-        launch { AnisearchCrawler(metaDataProviderConfig = AnisearchRelationsConfig).start() }
+        // anisearch is disabled too, but for a different reason than the three above: it is a direct-scrape
+        // provider (no FlareSolverr) and anisearch itself now hard-blocks this host's datacenter IP - TCP
+        // refused on the primary address, HTTP 403 on rotated ones. Confirmed IP-only: from a residential IP
+        // with the crawler's own browser User-Agent the same request returns 200, so the reverse SSH tunnel
+        // will fix it. Off until the tunnel exists.
+        // launch { AnisearchCrawler(metaDataProviderConfig = AnisearchConfig).start() }
+        // launch { AnisearchCrawler(metaDataProviderConfig = AnisearchRelationsConfig).start() }
         launch { KitsuCrawler.instance.start() }
         launch { LivechartCrawler.instance.start() }
         launch { MyanimelistCrawler.instance.start() }
