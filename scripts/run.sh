@@ -74,8 +74,9 @@ notify_crash() {
 
     # Keep the last chunk of output only so the payload stays under Discord's
     # 2000 character message limit (leaving headroom for the surrounding text).
+    # Strip the carriage returns and the header/footer lines that script(1) adds.
     local tail_txt
-    tail_txt="$(tail -n 30 "$logfile" 2>/dev/null || true)"
+    tail_txt="$(tr -d '\r' < "$logfile" 2>/dev/null | grep -vE '^Script (started|done) on ' | tail -n 30 || true)"
     tail_txt="${tail_txt: -1500}"
 
     local content
@@ -100,15 +101,20 @@ trap 'INTERRUPTED=1' INT TERM
 CAPTURE="$(mktemp -t modb-app.XXXXXX.log)"
 trap 'rm -f "$CAPTURE"' EXIT
 
-# Run the JVM as a child (not exec) so we regain control to inspect the exit
-# status and fire the alert. errexit is lifted around the pipeline so a non-zero
-# exit does not abort before we can react; PIPESTATUS[0] is the JVM's own status.
+# Run the JVM under a pseudo-terminal via script(1), not a pipe. The app shells
+# out to `sudo` for the IPv6 rotation; piping the JVM's stdout/stderr would leave
+# sudo without a tty on those fds, so it could not disable echo and would print
+# the typed password. script(1) gives the child a real pty (sudo hides the
+# password) while still capturing all console output to CAPTURE for the crash
+# alert. errexit is lifted so a non-zero exit does not abort before we can react;
+# `-e` makes script return the child's own exit status.
 set +e
-"$JAVA_BIN" \
+run_cmd="$(printf '%q ' "$JAVA_BIN" \
     -Djava.net.preferIPv6Addresses=true \
     -Djava.net.preferIPv4Stack=false \
-    -jar modb-app.jar "$@" 2>&1 | tee "$CAPTURE"
-STATUS="${PIPESTATUS[0]}"
+    -jar modb-app.jar "$@")"
+script -q -e -c "$run_cmd" "$CAPTURE"
+STATUS=$?
 set -e
 
 if [[ "$STATUS" -ne 0 && "$INTERRUPTED" -eq 0 ]]; then
