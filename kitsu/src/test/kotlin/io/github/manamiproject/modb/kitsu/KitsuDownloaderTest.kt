@@ -96,6 +96,47 @@ internal class KitsuDownloaderTest : MockServerTestCase<WireMockServer> by WireM
         }
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = ["delete", "deleted", "DELETE", "Deleted"])
+    fun `live entry (meta count 1) whose canonicalTitle marks it deleted invokes a dead entry`(deletedTitle: String) {
+        runTest {
+            // given
+            val id = 1535
+
+            val testKitsuConfig = object : MetaDataProviderConfig by TestMetaDataProviderConfig {
+                override fun hostname(): Hostname = "localhost"
+                override fun buildAnimeLink(id: AnimeId): URI = KitsuConfig.buildAnimeLink(id)
+                override fun buildDataDownloadLink(id: String): URI = URI("http://localhost:$port/graphql")
+                override fun fileSuffix(): FileSuffix = KitsuConfig.fileSuffix()
+            }
+
+            // kitsu keeps a soft-deleted entry live (200, meta count 1) but sets canonicalTitle to a delete marker.
+            val responseBody = """{ "data": [ { "attributes": { "canonicalTitle": "$deletedTitle" } } ], "meta": { "count": 1 } }"""
+
+            serverInstance.stubFor(
+                get(urlPathEqualTo("/graphql"))
+                    .willReturn(
+                        aResponse()
+                            .withHeader("Content-Type", "text/html")
+                            .withStatus(200)
+                            .withBody(responseBody)
+                    )
+            )
+
+            var deadEntry = EMPTY
+            val downloader = KitsuDownloader(testKitsuConfig)
+
+            // when
+            val result = downloader.download(id.toString()) {
+                deadEntry = it
+            }
+
+            // then
+            assertThat(deadEntry).isEqualTo(id.toString())
+            assertThat(result).isEmpty()
+        }
+    }
+
     @Test
     fun `throws an exception in case of an unhandled response code`() {
         // given
