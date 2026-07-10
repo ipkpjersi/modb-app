@@ -41,6 +41,15 @@ fetches) through a reverse SSH tunnel to a residential connection.
 
 ## Smaller follow-ups
 
+- **Bring MAL tests up to parity with the other providers.** `MyanimelistAnimeConverter` (the
+  heaviest-logic class) has only 4 `@Nested` test groups (HappyPath, Defaults, Type, Status) versus
+  the ~17 per-field groups the sibling converters have (e.g. kitsu). Add dedicated groups for the
+  currently untested `extract*` fields: Title, Episodes, PictureAndThumbnail, Duration, Synonyms,
+  Sources, RelatedAnime, Tags, Studios, Scores, AnimeSeason. Also add a test pinning `producers` as
+  always-empty under the v2 API (it does not expose producers). This matters because the v2 API
+  migration is the newest, most-changed code in the tree and deliberately drops fields, so it is
+  exactly where field-level regression coverage is most valuable and currently thinnest. Mirror the
+  kitsu converter test structure and reuse the existing MAL test fixtures.
 - **Latent core bug** (spotted during the FlareSolverr work, not yet fixed): `PathExtensions.readFile`
   throws `NoSuchFileException(this.toString())` inside `withContext`, so the exception message is the
   coroutine scope (e.g. `DispatchedCoroutine{Active}@...`), not the missing file path — misleading when

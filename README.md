@@ -62,6 +62,9 @@ Setup is identical for app and analyzer.
 * Create a fourth directory for raw download files
 * Create a [configuration file](core/README.md#configuration-management).
   * Set all the properties from the "Configuration" section down below which don't offer a default value.
+  * Provider credentials also live here, e.g. the MyAnimeList API client id is the
+    `modb.myanimelist.clientId` property (sent as the `X-MAL-CLIENT-ID` header). Keep `config.toml`
+    out of version control - it is already covered by `.gitignore`.
 
 ### Optional: Logback configuration
 
@@ -78,6 +81,21 @@ Run `main()` in `io/github/manamiproject/modb/app/App.kt` of the `app` module or
 Run
 * either `java -Djava.net.preferIPv6Addresses=true -Djava.net.preferIPv4Stack=false -jar modb-app.jar`
 * or `java -Djava.net.preferIPv6Addresses=true -Djava.net.preferIPv4Stack=false -jar modb-analyzer.jar`
+
+### Optional: crash alerts (Discord webhook)
+
+`scripts/run.sh` launches the app and, on a hard crash (the JVM exiting non-zero when it was not a
+manual Ctrl+C), posts the tail of the run output to a Discord webhook. The webhook URL is read from
+the `MODB_DISCORD_WEBHOOK` environment variable, or from a `discord-webhook.txt` file in the run
+directory (alongside `modb-app.jar` and `config.toml`). Put just the raw URL on a single line, with
+no quotes:
+
+```
+https://discord.com/api/webhooks/<id>/<token>
+```
+
+Keep that file out of version control - it is already covered by `.gitignore`. If no webhook is
+configured the alert is simply skipped.
 
 ## Configuration
 
