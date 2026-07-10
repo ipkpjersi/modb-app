@@ -139,7 +139,7 @@ class AnisearchCrawler(
     @KoverIgnore
     private suspend fun wait() {
         excludeFromTestContext(metaDataProviderConfig) {
-            delay(random(2000, 3000).toDuration(MILLISECONDS))
+            delay(random(3000, 6000).toDuration(MILLISECONDS))
         }
     }
 
