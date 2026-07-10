@@ -135,3 +135,68 @@ Rotating outbound IPv6 source address to [<address>].
 ```
 
 > **Note on anidb:** rotation must be removed from anidb once it is routed through the residential reverse SSH tunnel. On the tunnel its traffic exits via a fixed home IP that cannot (and should not) be rotated, and `restartAsync()` rotates the *shared* datacenter interface — so rotating on anidb's behalf would disrupt anisearch and the other providers that still exit via the datacenter IP. anisearch stays on the datacenter IP and keeps rotation.
+
+## Merging, merge locks and the "reviewed" percentage
+
+Each entry in the dataset represents a single anime whose `sources` array links that anime across the (up
+to nine) metadata providers. Combining the per-provider entries into one is **merging**, and the
+`_(N% reviewed)_` figure in the dataset's own README reflects how much of that merging has been
+**human-confirmed**. This trips people up, so to be precise: **"reviewed" is not about reviewing each
+anime's data — it is about confirming which provider IDs refer to the same anime.** You never have to
+review entries to produce a release; `0% reviewed` is a fully valid, releasable dataset.
+
+### How merging works (automatic)
+
+`DefaultMergingService` builds **golden records** — the canonical merged entry that accumulates `sources`
+from multiple providers. Providers are processed largest-first (myanimelist seeds the golden records), then
+the rest in descending order of entry count. For each incoming anime:
+
+1. If a **merge lock** already covers its sources, it is force-merged into that golden record and the
+   automatic matching is skipped.
+2. Otherwise candidate golden records are looked up by **title**, a matching probability is calculated for
+   each, and if the best is **≥ 80%** the anime is merged. Below 80% it is deferred and retried over up to
+   **4** run-throughs (a golden record can gain data from other merges that pushes a later match over the
+   threshold). If it never reaches 80%, it becomes its **own** golden record — i.e. a separate entry.
+
+So even with **no** review at all, the 80% matcher merges everything it can identify by title/probability.
+Review is a **confirmation layer on top of** merging, not the thing that performs it.
+
+### What "reviewed" means
+
+An entry counts as reviewed once its grouping decision is human-confirmed. That confirmation is recorded in
+two files inside the download-control-state directory (`modb.app.downloadControlStateDirectory`):
+
+| file | format | meaning |
+|------|--------|---------|
+| `merge.lock` | JSON `{"mergeLocks":[[uri, uri, …], …]}` | Each group is a set of source URLs confirmed to be the **same** anime. A locked group is force-merged on every future run, overriding the 80% heuristic. A given source may appear in only one group. |
+| `checked-isolated-entries.txt` | plain text, one source URL per line | Each URL is confirmed to be a **standalone** anime that should **not** merge with anything. |
+
+The percentage (`DefaultReadmeCreator`) is computed per entry, ignoring `animecountdown` (which mirrors
+`simkl`):
+
+* a **multi-source** entry is reviewed if all of its sources are in one `merge.lock` group;
+* a **single-source** entry is reviewed if it is listed in `checked-isolated-entries.txt` (or a merge lock).
+
+`reviewed% = 100 − (unreviewed / total × 100)`.
+
+### Recording reviews
+
+Merge locks and reviewed-isolated entries are written by the **modb-analyzer** tool (`Analyzer.kt`), not
+during a normal crawl. Reviewing is **incremental and persistent**: both files are read and reused by every
+subsequent run, so a confirmed decision is never redone — only newly ambiguous entries ever need attention.
+The scary jump from `0%` toward a high percentage is a one-time backlog, not a recurring cost.
+
+### Starting from 0% (forks)
+
+The upstream maintainer's accumulated review data (their `merge.lock` / `checked-isolated-entries.txt`) is
+private and is **not** distributed with the dataset, so a fork starts at **0% reviewed** — auto-merge only.
+The practical consequences are:
+
+* mostly **duplicate** entries — the same anime left as two golden records because the title match stayed
+  under 80%. These are harmless to the schema and can be merged either by review or in the consuming
+  application.
+* rarely an **over-merge** — two genuinely different anime combined into one entry (from a bad cross-provider
+  link). This can only be undone by review (a *split*); a downstream "merge" cannot fix it.
+
+Note also that a fork's higher raw entry count vs. upstream is a **mix** of genuinely new anime and unmerged
+duplicates — it is not one-for-one duplicates.
