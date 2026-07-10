@@ -65,6 +65,7 @@ public class DefaultHttpClient(
         .build(),
     private val isTestContext: Boolean = false,
     private val headerCreator: HeaderCreator = DefaultHeaderCreator.instance,
+    private val bufferResponseBody: Boolean = true,
 ) : HttpClient {
 
     private val retryBehavior: RetryBehavior = RetryBehavior()
@@ -184,7 +185,19 @@ public class DefaultHttpClient(
             }
 
             responseOrException = safelyExecute {
-                okhttpClient.newCall(request.newBuilder().build()).execute().toHttpResponse()
+                val response = okhttpClient.newCall(request.newBuilder().build()).execute().toHttpResponse()
+                if (bufferResponseBody && response.isOk()) {
+                    /*
+                        Read the whole body here, inside the retry try-catch, so a timeout while
+                        streaming the response body is retried like a connect/header timeout instead
+                        of escaping to the caller and aborting the crawl. The bytes are re-wrapped in
+                        an in-memory response so bodyAsStream() still works on the returned response.
+                        Streaming consumers opt out via bufferResponseBody = false to keep true streaming.
+                    */
+                    HttpResponse(response.code, response.bodyAsByteArray(), response.headers.toMutableMap())
+                } else {
+                    response
+                }
             }
 
             if (retryCase !is NoRetry) {

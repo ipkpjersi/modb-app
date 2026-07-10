@@ -29,6 +29,8 @@ internal class FlaresolverrHttpClient(
         // against the still-busy (single-browser) container.
         readTimeoutInSeconds = (flaresolverrConfig.maxTimeout / 1000L) + READ_TIMEOUT_BUFFER_SECONDS,
         isTestContext = appConfig.isTestContext(),
+        // Keep the FlareSolverr response streaming (it is consumed via bodyAsStream) rather than buffered.
+        bufferResponseBody = false,
     ),
 ): HttpClient {
 
