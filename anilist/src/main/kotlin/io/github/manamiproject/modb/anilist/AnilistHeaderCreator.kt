@@ -19,6 +19,9 @@ public object AnilistHeaderCreator {
      */
     public fun createAnilistHeaders(requestBody: RequestBody, referer: URL = URI("https://anilist.co").toURL()): Map<String, List<String>> {
         val url = "https://anilist.co"
+        // Read the token only once. A concurrent renewal in between two reads would otherwise mix the cookie of one
+        // token with the CSRF token of another which anilist rejects with a 403.
+        val token = AnilistDefaultTokenRepository.token
 
         return mapOf(
             "authority" to listOf(url),
@@ -31,8 +34,8 @@ public object AnilistHeaderCreator {
             "content-type" to listOf(requestBody.mediaType),
             "origin" to listOf(url),
             "schema" to listOf("default"),
-            "cookie" to listOf(AnilistDefaultTokenRepository.token.cookie),
-            "x-csrf-token" to listOf(AnilistDefaultTokenRepository.token.csrfToken),
+            "cookie" to listOf(token.cookie),
+            "x-csrf-token" to listOf(token.csrfToken),
             "referer" to listOf(referer.toString())
         )
     }
