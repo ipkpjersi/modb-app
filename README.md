@@ -295,3 +295,53 @@ re-runs merging with your new locks and then **rewrites the dataset files and re
 `README.md`** — including the `N% reviewed` figure and the per-provider entry counts — in
 `modb.app.outputDirectory`. This is a **delta update only**: it does *not* bump `week.release` or create a
 GitHub release (that only happens on a full weekly app run).
+
+## Possible improvements
+
+Ideas that are understood but not implemented yet.
+
+### Anilist: stop refreshing the token on repeat 403s, and back off like a 429
+
+`AnilistHttpClient` treats a `403` as "the CSRF token is stale": it fetches a new token and retries (up to
+3 attempts, with a short 5-10s / 10-20s backoff). That keeps the crawl alive, but the diagnosis behind it is
+wrong, and the current settings only barely work.
+
+Evidence from a live run: three *consecutive freshly minted* tokens were each rejected with `403` within
+~170ms of being issued, and the same request then succeeded after ~20s of cumulative backoff. The token is
+not the problem — only elapsed time is. The `403` is IP-level rate limiting, and the rate limit window looks
+like roughly 10-20 seconds.
+
+Two consequences:
+
+- **The refresh makes it worse.** `AnilistDefaultTokenRetriever` fetches the token by requesting
+  `anilist.co`, which is itself a request into the very rate limiter that is throttling us. Every `403`
+  therefore provokes an *extra* request at exactly the wrong moment. Over one 42 minute run that was 44
+  additional requests fired while being throttled.
+- **The backoff is too short.** 5-10s and 10-20s barely span a 10-20s window. In that run the retry ladder
+  went 36 / 7 / 1 (attempt 1 / 2 / 3) and reached the final rung once. If a rate limit window ever outlasts
+  the last attempt, the `403` reaches `AnilistDownloader`, which throws `IllegalStateException: Unable to
+  determine the correct case`, and the whole crawl aborts (fail-fast is intentional, see the crash alert
+  section).
+
+Suggested change:
+
+1. Refresh the token only on the **first** `403` (cheap, and still covers a genuinely stale token). On
+   repeat `403`s do not refresh at all — just back off and retry with the token already in hand. This
+   removes the amplification.
+2. Raise the backoff to the policy `DefaultHttpClient` already uses for `429`:
+   `random(60_000, 90_000) * attempt`, i.e. ~1-1.5 min then ~2-3 min. That comfortably clears the window
+   instead of racing it.
+
+The cost is that a rate limited entry stalls for a couple of minutes instead of seconds, which is cheap
+compared to aborting the crawl.
+
+Note that IP rotation is not an option here: rotation is not wired into the anilist scraper, and rotation
+only triggers on connection-level failures anyway - HTTP-level bans like `403`/`429` are always retried on
+the same address (see [IP rotation](#ip-rotation)).
+
+### Anilist: raise the per-entry delay
+
+`AnilistCrawler` downloads strictly sequentially (a `repeat(...)` loop, one request in flight at a time) and
+waits `random(1000, 2000)` ms between entries. Since the `403`s above are rate limiting, the cheapest fix
+may not be recovery at all but prevention: raising that delay reduces the `403`s at the source. `anisearch`
+was slowed down (`random(3000, 6000)` ms) for the same reason.
