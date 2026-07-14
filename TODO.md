@@ -11,8 +11,15 @@ commented-out `launch { <Provider>Crawler...start() }` calls, crawlers for deact
 instantiated, and fail-fast is unchanged (a *selected* provider failing still aborts the whole run).
 Default = ALL providers enabled (empty list), so a normal full run behaves as before.
 
-**Still open:** CLI params (`--only anidb,anime-planet` / `--skip simkl`) with CLI overriding config. The
-config list already unblocks a targeted live run, but it needs an edit of `config.toml` rather than a flag.
+**CLI params done (2026-07-14).** `main` now accepts `--only anidb,anime-planet` / `--skip simkl` (both take a
+comma-separated list; a provider is named by hostname `anidb.net` or short label `anidb`, and `--only=x` also
+works). `--only` is an allowlist that deactivates every other provider for the run and can even re-enable a
+provider that `config.toml` deactivated (the residential-only test-run case); `--skip` is additive on top of the
+config list. The two are mutually exclusive and a bad flag/unknown provider fails fast with usage before the sudo
+prompt. `MetaDataProviderSelection` (parser) resolves the effective deactivated set and `SelectedProvidersConfig`
+(a `Config` decorator) feeds it to both consumers - the crawler filter and
+`DownloadControlStateWeeksValidationPostProcessor` - so they stay consistent. No CLI flag = config.toml behavior
+unchanged.
 
 **Payoff.** Enables a *targeted live run* of just anidb/anime-planet to confirm they actually
 work (or get blocked) end-to-end. `check-all-providers.sh` is only a single-request reachability
@@ -60,6 +67,23 @@ data until their week arrives, so only do it if the one-shot run is actually a p
 **Depends on item 1** — needs per-provider routing (enable control is done).
 
 ## Smaller follow-ups
+
+- **Make `DefaultDownloadControlStateUpdater.updateAll()` safe to run twice in the same week.** Its own
+  class doc says it "can only be executed once in a meaningful way per weekly update", and that is a real
+  trap: if a run crashes *after* `updateAll()` (as it did on 2026-07-13, in
+  `DownloadControlStateWeeksValidationPostProcessor`), the only way to finish the week is to re-run the
+  app, which runs `updateAll()` a second time over the same `*.conv` files. Every finished anime then
+  compares equal to itself, takes the `scheduleRedownloadForUnchangedAnime()` branch, and gets
+  `_weeksWihoutChange` inflated and `_nextDownload` pushed out an extra backoff step (~85k entries on the
+  2026-W29 re-run). Bounded and self-healing (the 12-week cap still holds) and ongoing/upcoming anime are
+  unaffected (they always reschedule to +1 week), but it degrades refresh frequency for a cycle and the
+  cost is paid again on every late-stage crash.
+  **Fix:** in `handleUpdate`, skip the entry when the existing DCS entry has `_lastDownloaded ==
+  WeekOfYear.currentWeek()` *and* its stored anime equals the conv anime (same comparison `update()` uses,
+  i.e. ignoring scores). That entry was already fully accounted for this week, so there is nothing to do.
+  A *partially* updated crash still heals correctly, because entries that never got updated still carry an
+  older `_lastDownloaded`, and an entry genuinely re-downloaded with new data still differs and takes the
+  normal update path. Needs tests for all three cases.
 
 - **Bring MAL tests up to parity with the other providers.** `MyanimelistAnimeConverter` (the
   heaviest-logic class) has only 4 `@Nested` test groups (HappyPath, Defaults, Type, Status) versus

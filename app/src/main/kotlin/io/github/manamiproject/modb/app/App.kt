@@ -6,7 +6,10 @@ import io.github.manamiproject.modb.anilist.AnilistConfig
 import io.github.manamiproject.modb.animeplanet.AnimePlanetConfig
 import io.github.manamiproject.modb.anisearch.AnisearchConfig
 import io.github.manamiproject.modb.anisearch.AnisearchRelationsConfig
+import io.github.manamiproject.modb.app.cli.MetaDataProviderSelection
 import io.github.manamiproject.modb.app.config.AppConfig
+import io.github.manamiproject.modb.app.config.Config
+import io.github.manamiproject.modb.app.config.SelectedProvidersConfig
 import io.github.manamiproject.modb.app.convfiles.DefaultRawFileConversionService
 import io.github.manamiproject.modb.app.crawlers.Crawler
 import io.github.manamiproject.modb.app.crawlers.anidb.AnidbCrawler
@@ -26,6 +29,7 @@ import io.github.manamiproject.modb.app.network.LinuxNetworkController
 import io.github.manamiproject.modb.app.network.startFlaresolverr
 import io.github.manamiproject.modb.app.network.stopFlaresolverr
 import io.github.manamiproject.modb.app.postprocessors.*
+import io.github.manamiproject.modb.core.config.Hostname
 import io.github.manamiproject.modb.core.config.MetaDataProviderConfig
 import io.github.manamiproject.modb.core.coroutines.CoroutineManager.runCoroutine
 import io.github.manamiproject.modb.core.coroutines.ModbDispatchers.LIMITED_NETWORK
@@ -44,8 +48,27 @@ import javax.swing.SwingUtilities
 import kotlin.system.exitProcess
 
 @KoverIgnore
-fun main() = runCoroutine {
-    val appConfig = AppConfig.instance
+fun main(args: Array<String>) {
+    // Resolve provider selection (--only/--skip) before any sudo prompt or crawler starts, so a bad flag or an
+    // unknown provider name fails fast with usage instead of after prompting for a password.
+    val deactivatedProviders = try {
+        MetaDataProviderSelection().deactivatedProvidersForRun(args)
+    } catch (e: IllegalArgumentException) {
+        System.err.println(e.message)
+        System.err.println(MetaDataProviderSelection.USAGE)
+        exitProcess(1)
+    }
+
+    runCoroutine {
+        run(deactivatedProviders)
+    }
+}
+
+@KoverIgnore
+private suspend fun run(deactivatedProviders: Set<Hostname>) {
+    // CLI selection overrides config.toml's 'deactivatedMetaDataProviders' for this run. The decorator feeds the
+    // same set to both consumers: the crawler filter below and DownloadControlStateWeeksValidationPostProcessor.
+    val appConfig: Config = SelectedProvidersConfig(AppConfig.instance, deactivatedProviders)
     val networkController = LinuxNetworkController.instance
     networkController.sudoPasswordValue = passwordPrompt()
     Runtime.getRuntime().addShutdownHook(Thread { networkController.restore() })
@@ -91,7 +114,7 @@ fun main() = runCoroutine {
 
     listOf(
         NoLockFilesLeftValidationPostProcessor.instance,
-        DownloadControlStateWeeksValidationPostProcessor.instance,
+        DownloadControlStateWeeksValidationPostProcessor(appConfig = appConfig),
         StudiosAndProducersExtractionChecker.instance,
         DuplicatesValidationPostProcessor.instance,
         ZstandardFilesForDeadEntriesCreatorPostProcessor.instance,
