@@ -1,8 +1,14 @@
 package io.github.manamiproject.modb.app
 
+import io.github.manamiproject.AnimenewsnetworkConfig
+import io.github.manamiproject.modb.anidb.AnidbConfig
+import io.github.manamiproject.modb.anilist.AnilistConfig
+import io.github.manamiproject.modb.animeplanet.AnimePlanetConfig
 import io.github.manamiproject.modb.anisearch.AnisearchConfig
 import io.github.manamiproject.modb.anisearch.AnisearchRelationsConfig
+import io.github.manamiproject.modb.app.config.AppConfig
 import io.github.manamiproject.modb.app.convfiles.DefaultRawFileConversionService
+import io.github.manamiproject.modb.app.crawlers.Crawler
 import io.github.manamiproject.modb.app.crawlers.anidb.AnidbCrawler
 import io.github.manamiproject.modb.app.crawlers.anilist.AnilistCrawler
 import io.github.manamiproject.modb.app.crawlers.animenewsnetwork.AnimenewsnetworkCrawler
@@ -20,10 +26,16 @@ import io.github.manamiproject.modb.app.network.LinuxNetworkController
 import io.github.manamiproject.modb.app.network.startFlaresolverr
 import io.github.manamiproject.modb.app.network.stopFlaresolverr
 import io.github.manamiproject.modb.app.postprocessors.*
+import io.github.manamiproject.modb.core.config.MetaDataProviderConfig
 import io.github.manamiproject.modb.core.coroutines.CoroutineManager.runCoroutine
 import io.github.manamiproject.modb.core.coroutines.ModbDispatchers.LIMITED_NETWORK
 import io.github.manamiproject.modb.core.coverage.KoverIgnore
 import io.github.manamiproject.modb.core.extensions.EMPTY
+import io.github.manamiproject.modb.kitsu.KitsuConfig
+import io.github.manamiproject.modb.livechart.LivechartConfig
+import io.github.manamiproject.modb.myanimelist.MyanimelistConfig
+import io.github.manamiproject.modb.simkl.SimklConfig
+import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import javax.swing.JOptionPane.*
@@ -33,6 +45,7 @@ import kotlin.system.exitProcess
 
 @KoverIgnore
 fun main() = runCoroutine {
+    val appConfig = AppConfig.instance
     val networkController = LinuxNetworkController.instance
     networkController.sudoPasswordValue = passwordPrompt()
     Runtime.getRuntime().addShutdownHook(Thread { networkController.restore() })
@@ -41,26 +54,25 @@ fun main() = runCoroutine {
     val rawFileConversionService = DefaultRawFileConversionService.instance
     rawFileConversionService.start()
 
+    // Which metadata provider are deactivated is defined by 'deactivatedMetaDataProviders' in config.toml, so a
+    // provider can be switched off without a rebuild. Crawlers are created lazily to keep a deactivated provider
+    // from being instantiated at all.
     withContext(LIMITED_NETWORK) {
-        // anidb, anime-planet and simkl are disabled: FlareSolverr solves their Cloudflare challenge but they
-        // also block this host's datacenter IP. They stay off until the reverse SSH tunnel provides a residential
-        // exit (which will route FlareSolverr's traffic). The FlareSolverr wiring is already in place for them.
-        // launch { AnidbCrawler.instance.start() }
-        launch { AnilistCrawler.instance.start() }
-        // launch { AnimePlanetCrawler.instance.start() }
-        launch { AnimenewsnetworkCrawler.instance.start() }
-        // anisearch is disabled too, but for a different reason than the three above: it is a direct-scrape
-        // provider (no FlareSolverr) and anisearch itself now hard-blocks this host's datacenter IP - TCP
-        // refused on the primary address, HTTP 403 on rotated ones. Confirmed IP-only: from a residential IP
-        // with the crawler's own browser User-Agent the same request returns 200, so the reverse SSH tunnel
-        // will fix it. Off until the tunnel exists.
-        // launch { AnisearchCrawler(metaDataProviderConfig = AnisearchConfig).start() }
-        // launch { AnisearchCrawler(metaDataProviderConfig = AnisearchRelationsConfig).start() }
-        launch { KitsuCrawler.instance.start() }
-        launch { LivechartCrawler.instance.start() }
-        launch { MyanimelistCrawler.instance.start() }
-        // launch { SimklCrawler.instance.start() }
-    }.join()
+        listOf<Pair<MetaDataProviderConfig, () -> Crawler>>(
+            AnidbConfig to { AnidbCrawler.instance },
+            AnilistConfig to { AnilistCrawler.instance },
+            AnimePlanetConfig to { AnimePlanetCrawler.instance },
+            AnimenewsnetworkConfig to { AnimenewsnetworkCrawler.instance },
+            AnisearchConfig to { AnisearchCrawler(metaDataProviderConfig = AnisearchConfig) },
+            AnisearchRelationsConfig to { AnisearchCrawler(metaDataProviderConfig = AnisearchRelationsConfig) },
+            KitsuConfig to { KitsuCrawler.instance },
+            LivechartConfig to { LivechartCrawler.instance },
+            MyanimelistConfig to { MyanimelistCrawler.instance },
+            SimklConfig to { SimklCrawler.instance },
+        ).filterNot { (metaDataProviderConfig, _) -> appConfig.isDeactivated(metaDataProviderConfig) }
+            .map { (_, crawler) -> launch { crawler().start() } }
+            .joinAll()
+    }
 
     rawFileConversionService.waitForAllRawFilesToBeConverted()
     rawFileConversionService.shutdown()

@@ -709,6 +709,121 @@ internal class AppConfigTest {
     }
 
     @Nested
+    inner class DeactivatedMetaDataProvidersTests {
+
+        @Test
+        fun `returns an empty set if the config property is not set`() {
+            // given
+            val testConfigRegistry = object: ConfigRegistry by TestConfigRegistry {
+                override fun <T : Any> list(key: String): List<T>? = null
+            }
+
+            val appConfig = AppConfig(
+                configRegistry = testConfigRegistry,
+            )
+
+            // when
+            val result = appConfig.deactivatedMetaDataProviders()
+
+            // then
+            assertThat(result).isEmpty()
+        }
+
+        @Test
+        fun `correctly returns the deactivated metadata provider`() {
+            // given
+            val testConfigRegistry = object: ConfigRegistry by TestConfigRegistry {
+                @Suppress("UNCHECKED_CAST")
+                override fun <T : Any> list(key: String): List<T> = listOf(
+                    AnisearchConfig.hostname(),
+                    SimklConfig.hostname(),
+                ) as List<T>
+            }
+
+            val appConfig = AppConfig(
+                configRegistry = testConfigRegistry,
+            )
+
+            // when
+            val result = appConfig.deactivatedMetaDataProviders()
+
+            // then
+            assertThat(result).containsExactlyInAnyOrder(
+                AnisearchConfig.hostname(),
+                SimklConfig.hostname(),
+            )
+        }
+
+        @Test
+        fun `throws an exception if a hostname doesn't belong to a known metadata provider`() {
+            // given
+            val testConfigRegistry = object: ConfigRegistry by TestConfigRegistry {
+                @Suppress("UNCHECKED_CAST")
+                override fun <T : Any> list(key: String): List<T> = listOf(
+                    AnisearchConfig.hostname(),
+                    "example.org",
+                ) as List<T>
+            }
+
+            val appConfig = AppConfig(
+                configRegistry = testConfigRegistry,
+            )
+
+            // when
+            val result = exceptionExpected<IllegalStateException> {
+                appConfig.deactivatedMetaDataProviders()
+            }
+
+            // then
+            assertThat(result).hasMessage("Unknown hostnames set by 'deactivatedMetaDataProviders': [example.org].")
+        }
+    }
+
+    @Nested
+    inner class IsDeactivatedTests {
+
+        @Test
+        fun `returns true for a deactivated metadata provider and false for an active one`() {
+            // given
+            val testConfigRegistry = object: ConfigRegistry by TestConfigRegistry {
+                @Suppress("UNCHECKED_CAST")
+                override fun <T : Any> list(key: String): List<T> = listOf(AnisearchConfig.hostname()) as List<T>
+            }
+
+            val appConfig = AppConfig(
+                configRegistry = testConfigRegistry,
+            )
+
+            // when
+            val deactivated = appConfig.isDeactivated(AnisearchConfig)
+            val active = appConfig.isDeactivated(MyanimelistConfig)
+
+            // then
+            assertThat(deactivated).isTrue()
+            assertThat(active).isFalse()
+        }
+
+        @Test
+        fun `returns true for the anisearch relations config, because it shares the hostname with anisearch`() {
+            // given
+            val testConfigRegistry = object: ConfigRegistry by TestConfigRegistry {
+                @Suppress("UNCHECKED_CAST")
+                override fun <T : Any> list(key: String): List<T> = listOf(AnisearchConfig.hostname()) as List<T>
+            }
+
+            val appConfig = AppConfig(
+                configRegistry = testConfigRegistry,
+            )
+
+            // when
+            val result = appConfig.isDeactivated(AnisearchRelationsConfig)
+
+            // then
+            assertThat(result).isTrue()
+        }
+    }
+
+    @Nested
     inner class CompanionObjectTests {
 
         @Test

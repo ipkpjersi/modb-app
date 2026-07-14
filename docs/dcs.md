@@ -49,3 +49,20 @@ that every anime must be downloaded from each metadata provider at least once pe
 * **2020-09** Change detected. Redownload next week.
 * **2020-10** First week without changes. Redownload in `2` weeks
 * **...**
+
+## Deactivated metadata provider
+
+A metadata provider can be deactivated by adding its hostname to `deactivatedMetaDataProviders` in `config.toml`.
+No crawler is started for it, which has a consequence for DCS that is easy to miss.
+
+DCS entries are only updated for anime which have been downloaded in the current run. A deactivated metadata provider
+downloads nothing, so its DCS entries keep the schedule of the last run in which it was still active. The week for
+their next download therefore arrives and then passes, while nothing updates them. Its anime remain in the dataset,
+they are simply no longer refreshed.
+
+For that reason `DownloadControlStateWeeksValidationPostProcessor` skips the entries of deactivated metadata provider.
+Without that exception every run would fail once the week for the next download of the first stale entry has been
+reached, and the failure would surface at the very end of the run, long after the crawlers finished.
+
+Note that deactivating a metadata provider stops the guarantee that every anime is downloaded from each metadata
+provider at least once per quarter. The data of a deactivated metadata provider ages for as long as it stays off.
