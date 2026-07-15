@@ -161,7 +161,7 @@ class SimklCrawler(
     @KoverIgnore
     private suspend fun wait() {
         excludeFromTestContext(metaDataProviderConfig) {
-            delay(random(1000, 2000).toDuration(MILLISECONDS))
+            delay(random(2000, 3000).toDuration(MILLISECONDS))
         }
     }
 

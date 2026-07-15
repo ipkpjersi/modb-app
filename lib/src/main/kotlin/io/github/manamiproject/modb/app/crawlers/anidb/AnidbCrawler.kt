@@ -125,7 +125,7 @@ class AnidbCrawler(
     @KoverIgnore
     private suspend fun wait() {
         excludeFromTestContext(metaDataProviderConfig) {
-            delay(random(1500, 2500).toDuration(MILLISECONDS))
+            delay(random(2500, 3500).toDuration(MILLISECONDS))
         }
     }
 
