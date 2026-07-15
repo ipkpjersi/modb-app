@@ -25,7 +25,7 @@ internal object OpenInBrowserHelper {
         val options = mutableListOf(
             "[keep] (= add merge lock as is)",
             "[skip] (= don't create merge lock for this entry)",
-            "[a valid URL] (= add URL to merge lock)",
+            "[paste a valid URL] (= add URL to merge lock)",
         )
 
         if (currentEntryUris.size == 1) {

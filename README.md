@@ -208,33 +208,57 @@ Review is done through the **analyzer**, a separate interactive terminal program
 (`modb.app.outputDirectory`) and the same DCS directory (`modb.app.downloadControlStateDirectory`). Run:
 
 ```
-java -Djava.net.preferIPv6Addresses=true -Djava.net.preferIPv4Stack=false -jar modb-analyzer.jar
+./scripts/run-analyzer.sh
 ```
 
-> **Needs a desktop/GUI.** For each entry the analyzer opens the candidate provider pages in your browser
-> (`java.awt.Desktop.browse`). On a headless server that step is skipped with a warning, so review is
-> effectively a workstation task.
+(or run the jar directly from the run directory: `java -Djava.net.preferIPv6Addresses=true
+-Djava.net.preferIPv4Stack=false -jar modb-analyzer.jar`). Run it inside `tmux` when you are over SSH so a
+dropped connection does not interrupt a half-finished cluster.
+
+> **Works over SSH — no desktop required.** For each entry the analyzer prints the candidate provider URLs
+> as clickable **OSC 8 hyperlinks**, so you open them in your local browser straight from the terminal
+> (iTerm2, Kitty, Windows Terminal, GNOME Terminal, VS Code, …; terminals without OSC 8 support just show
+> the plain, copy-pasteable URLs). On a machine with a desktop it *also* tries to auto-open the pages via
+> `java.awt.Desktop.browse`; on a headless server that auto-open is skipped with a warning and you use the
+> printed links instead.
 
 It loads the finished dataset into memory and shows a menu:
 
 ```
-[1] Show unseen duplicates          [c] Check merge locks
-[2] Show cluster sizes              [d] Mark as dead entry
-[3] Show DCS statistics             [l] Load anime manually
-                                    [n] Create a merge lock from scratch
-                                    [a] Add a URL to an existing merge lock
-[r] Reprocess merging               [q] quit
+MODB - ANALYZER
+------------------------------------
+[1] Show unseen duplicates
+[2] Show cluster sizes
+[3] Show DCS statistics
+------------------------------------
+[c] Check merge locks
+[d] Mark as dead entry
+[l] Load anime manually
+[n] Create a merge lock from scratch
+[a] Add a URL to an existing merge lock
+------------------------------------
+[r] Reprocess merging
+------------------------------------
+[q] quit
+------------------------------------
+
+Select:
 ```
+
+**The option you typically want is `[c] Check merge locks`** — that is the review loop where duplicates are
+actually cleared. Everything else is a read-only report (`[1]`/`[2]`/`[3]`), a one-off manual tool
+(`[n]`/`[a]`/`[d]`/`[l]`), or the apply step (`[r]`).
 
 A **cluster** is the set of entries that have the same *number* of `sources`. The normal workflow is:
 
 1. **`[2] Show cluster sizes`** — prints, per cluster, the total entries and how many are still
    **unreviewed**. This is your backlog. Cluster `1` (single-source entries) is where most of the
-   split-anime duplicates live.
+   split-anime duplicates live, but it is also the largest group, so warm up on a smaller cluster such as
+   `2` to get the feel of the loop before grinding cluster `1`.
 2. **`[c] Check merge locks`** — pick a cluster and it walks you through each *unreviewed* entry in it
    (entries already covered by a merge lock or `checked-isolated-entries.txt` are filtered out). For each
-   one it opens the URLs in your browser and prints a side-by-side diff table, then prompts `Option:`.
-   Type one of:
+   one it prints the candidate URLs as clickable links (and auto-opens them in a browser if there is a
+   desktop) plus a side-by-side diff table, then prompts `Option:`. Type one of:
    * **`keep`** — these sources ARE the same anime -> writes a merge lock group (force-merged forever after).
    * **a pasted provider URL** — add another provider's entry to the group you are building, then re-prompt.
    * **`check`** — (single-source entries only) confirm it is genuinely standalone -> appends it to
@@ -242,11 +266,18 @@ A **cluster** is the set of entries that have the same *number* of `sources`. Th
    * **`skip`** — undecided; writes nothing, so it reappears next time.
    * **`exit`** — back to the main menu.
 
-   In plain English: **`keep` = "these are the same anime, merge/lock them together"**, and **`check` =
-   "this single entry is a unique anime, never merge it with anything"**. To merge a duplicate you first
-   paste the other provider's URL (which adds it to the group on screen), then type `keep` to lock the
-   combined group. Typing `keep` on an entry you did not add anything to simply confirms and locks its
-   current sources as-is.
+   In plain English, matching the `Provider` column of the diff table: **`keep` = "these are the same
+   anime, merge/lock these providers together"**, and **`check` = "this is a unique anime, never merge it
+   with other providers"**. To merge a duplicate you first paste the other provider's URL (which adds it to
+   the group on screen), then type `keep` to lock the combined group. Typing `keep` on an entry you did not
+   add anything to simply confirms and locks its current sources as-is.
+
+   **The URL list it prints is not all real entries.** Only the direct URLs (with an ID, like
+   `anilist.co/anime/158702`) are the entry's actual sources. The rest are pre-filled *search* links (note
+   the `?q=` / `search` in them) generated for every provider the entry does **not** yet have, so you can
+   quickly check whether a missing provider also has this anime. If one does, paste its real URL to add it,
+   then `keep`. So a "single-source" entry just means one provider has it *so far* — the searches are how
+   you look for the rest.
 
 **Two different "duplicate" notions** — don't confuse them. They are *opposite* failure directions:
 
@@ -295,6 +326,62 @@ re-runs merging with your new locks and then **rewrites the dataset files and re
 `README.md`** — including the `N% reviewed` figure and the per-provider entry counts — in
 `modb.app.outputDirectory`. This is a **delta update only**: it does *not* bump `week.release` or create a
 GitHub release (that only happens on a full weekly app run).
+
+**You do not have to review everything.** Review is an optional confirmation layer on top of the automatic
+80% merger, not a requirement. The dataset is fully usable at 0% reviewed; unreviewed just means
+"not yet human-confirmed", not "broken". `skip` and `exit` write nothing, decisions persist forever, and you
+can stop at any point. For clearing duplicates specifically, the bounded win is the over-merges from `[1]`
+(they are actually wrong); grinding the 20,949 single-source entries in cluster `1` with `check` mostly just
+raises the reviewed percentage and removes no duplicates.
+
+### Reading the read-only reports (`[1]` / `[2]` / `[3]`)
+
+These three menu items are dashboards. They print information and change nothing.
+
+**`[2] Show cluster sizes`** is your backlog. One row per *number of sources*, showing how many entries have
+that many sources and how many are still unreviewed:
+
+```
+| Number of sources | Number of entries in database | Number of unreviewed entries |
+|-------------------|-------------------------------|------------------------------|
+| 1                 | 20949                         | 20949                        |
+| 2                 | 7429                          | 7429                         |
+| 6                 | 4796                          | 4796                         |
+```
+
+The number you type at the `[c]` prompt is this first column (the number of sources), not a cluster index. A
+high source count means an anime matched across many providers, so it is well merged; the single-source row
+is the large pile of possible split-anime. When the unreviewed column equals the total column on every row
+you are at 0% reviewed. A count higher than the number of providers (about 9 to 10) means the entry holds
+multiple IDs from one provider, so it overlaps with `[1]`.
+
+**`[1] Show unseen duplicates`** lists the over-merges: each line is one entry that holds two or more IDs
+from the *same* provider (the over-merged row in the table above). Each of these needs a split.
+
+```
+[https://anilist.co/anime/103317, https://anilist.co/anime/104064]          two AniList IDs, one entry
+[https://myanimelist.net/anime/10495, https://myanimelist.net/anime/12403]  two MAL IDs, one entry
+```
+
+**`[3] Show DCS statistics`** is the crawler's redownload schedule and has nothing to do with review.
+Entries are grouped by the week they are next due for download (`_nextDownload`), broken down per provider:
+
+```
+2026-29
+-------
+anisearch.com        : 18828
+
+2026-30
+-------
+anilist.co           : 1071
+myanimelist.net      : 10322
+```
+
+Read it as crawl freshness. A deactivated provider bunches all its entries in one week and stays there (all
+of anisearch in a single week, because it no longer updates), while active providers spread across upcoming
+weeks as a rolling schedule. A provider with no rows has zero DCS entries (it never crawled successfully).
+The totals are far larger than the dataset entry count because DCS tracks each provider-source separately,
+before merging (a 6-source anime is 6 DCS rows but 1 dataset entry).
 
 ## Possible improvements
 
