@@ -47,10 +47,25 @@ fetches) through a reverse SSH tunnel to a residential connection.
   `merge.lock` (+ `checked-isolated-entries.txt`) from an upstream anime-offline-database release; canonical
   copies live in `review-data/`. The initial import (2026-07-14) used `--restrict-to-fork` so `merge.lock`
   only references providers the fork actually crawls, because `DeadEntriesValidationPostProcessor` aborts on
-  merge.lock sources that have no DCS file (an uncrawled provider looks "dead" to it). Once the residential
-  providers are crawling, re-run against a current upstream release **without** `--restrict-to-fork` and
-  reprocess: that folds anidb/anime-planet/simkl (and full anisearch) into the existing groups, reuniting the
-  cross-provider splits and lifting "reviewed" from ~89% back toward upstream's ~98%.
+  merge.lock sources that have no DCS file (an uncrawled provider looks "dead" to it). This is why ~3,745 of
+  the ~3,846 unreviewed cluster-1 entries are not new anime but fork halves of upstream pairs whose partner
+  provider (anidb / anime-planet / simkl / anisearch) is not being crawled: `--restrict-to-fork` strips the
+  uncrawled partner, the group collapses below two sources, and it is skipped. Reactivating those providers
+  folds all of them back in at once. Do it in this order:
+
+  1. Tunnel up, then remove the four hostnames from `deactivatedMetaDataProviders` in `config.toml`.
+  2. Run a full crawl so anidb/anime-planet/simkl/anisearch land in the fork-db. This is the step that makes
+     the difference - the bootstrap can only keep sources the fork-db already contains.
+  3. Regenerate the bootstrap against that fresh fork-db, **keeping `--restrict-to-fork`**, and copy the new
+     `merge.lock` (+ `checked-isolated-entries.txt`) into place.
+  4. Reprocess. The reunited cross-provider groups lift "reviewed" from ~89% back toward upstream's ~98%.
+
+  Keep `--restrict-to-fork` on the re-run - it is the robust choice, not `--restrict-to-fork`-off. Once a
+  provider is crawled its URLs are in the fork-db, so the flag keeps them; it only ever drops providers that
+  are still not being crawled, which is exactly what you want (dropping `--restrict-to-fork` would put those
+  still-missing providers' URLs back into `merge.lock` and re-trigger the dead-entries crash). Dropping the
+  flag is only safe once every provider is crawling. See the "Dead-entries validator" note in README's
+  Possible improvements for the code change that would remove the `--restrict-to-fork` requirement entirely.
 
 ### Handle the stale DCS entries when reactivating
 

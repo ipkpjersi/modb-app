@@ -432,3 +432,32 @@ the same address (see [IP rotation](#ip-rotation)).
 waits `random(1000, 2000)` ms between entries. Since the `403`s above are rate limiting, the cheapest fix
 may not be recovery at all but prevention: raising that delay reduces the `403`s at the source. `anisearch`
 was slowed down (`random(3000, 6000)` ms) for the same reason.
+
+### Dead-entries validator: skip deactivated providers in the merge-lock check
+
+`DeadEntriesValidationPostProcessor.process()` runs three dead-entries checks, but they are not symmetric.
+The DCS check and the dataset check both `filterNot { ignoreMetaDataConfiguration.any { it.hostname() ==
+source.host } }` before validating, so sources from non-crawlable providers are dropped first. The merge-lock
+check does not - it validates `mergeLockAccess.allSourcesInAllMergeLockEntries()` unfiltered.
+
+That asymmetry is only harmless as long as `merge.lock` never references a provider the fork is not crawling.
+It does not matter for the app's own merge locks (those only ever contain crawled sources), but it is exactly
+what forces `scripts/bootstrap-merge-locks.py` to run with `--restrict-to-fork`: the bootstrap imports
+upstream's groups, which legitimately reference deactivated providers (anidb / anime-planet / simkl /
+anisearch). Any such URL has no DCS file, so `determineDeadEntries` treats it as dead and
+`check(deadEntriesInList.isEmpty())` aborts the whole reprocess (this was the second bootstrap crash).
+
+`--restrict-to-fork` sidesteps it by stripping every uncrawled source before writing `merge.lock`, but that
+has a real cost: an upstream group like `[anime-planet, kitsu]` collapses to a single `kitsu` source, drops
+below the two-source threshold, and is skipped entirely. The `kitsu` entry then shows up in the analyzer as
+an unreviewed single-source (cluster 1) entry even though upstream already grouped it - about 3,745 of the
+~3,846 cluster-1 stragglers are these deferred cross-provider splits, not genuinely new anime.
+
+Suggested change: give the merge-lock check the same filter the other two already have - drop sources whose
+host is a deactivated (or otherwise non-crawlable) provider before calling `determineDeadEntries`. Then the
+bootstrap can run **without** `--restrict-to-fork` and keep the full upstream groups. Those ~3,745 entries
+would count as reviewed immediately (their source is part of a valid lock), and each would reunite with its
+partner automatically the moment that provider is crawled - no bootstrap re-run needed. The deactivated
+sources in the lock stay inert until then, doing no harm because the merger only force-merges the sources
+that actually exist. Worth confirming nothing else in the pipeline trips on a lock source that has no DCS
+file before dropping the flag, but the validator is the only known blocker.
