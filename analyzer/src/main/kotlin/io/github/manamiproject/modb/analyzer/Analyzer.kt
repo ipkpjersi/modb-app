@@ -269,6 +269,7 @@ object Analyzer {
                                 }
 
                                 println("\n${Json.toJson(newMergeLock.toList().sorted())}")
+                                println(clickableLinks(newMergeLock.toList().sorted()))
                                 println("\n[keep] (= add merge lock as is)    [exit] (= back to main menu)")
                                 print("Select: ")
 
@@ -295,6 +296,7 @@ object Analyzer {
     private suspend fun createNewMergeLockFromScratch(sourcesOfCurrentEntry: Set<URI>): Set<URI> {
         println("[keep] (= add merge lock as is)    [a valid URL] (= add URL to merge lock)    [exit] (= back to main menu)")
         println("\n${Json.toJson(sourcesOfCurrentEntry)}")
+        clickableLinks(sourcesOfCurrentEntry.toList()).takeIf { it.isNotEmpty() }?.let { println(it) }
 
         print("\nSelect: ")
         val input = waitForUserInput()

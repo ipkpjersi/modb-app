@@ -80,6 +80,11 @@ internal object OpenInBrowserHelper {
             currentEntryUris
         } + searchLinkForMissingMetaDataProvider
 
+        // Print every URL that would be auto-opened (the entry's own sources plus search links for the missing
+        // providers) as clickable OSC 8 hyperlinks, so the review is fully usable over a plain terminal where the
+        // browser cannot be opened automatically.
+        println(clickableLinks(urisToOpenInBrowser))
+
         return urisToOpenInBrowser
     }
 }
