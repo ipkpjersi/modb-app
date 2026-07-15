@@ -201,6 +201,46 @@ The practical consequences are:
 Note also that a fork's higher raw entry count vs. upstream is a **mix** of genuinely new anime and unmerged
 duplicates — it is not one-for-one duplicates.
 
+### Bootstrapping review data from a public release
+
+Upstream's raw `merge.lock` is private, but its **published dataset already encodes the identical groupings**:
+every entry's `sources` array is exactly a merge-lock group (a set of source URLs confirmed to be the same
+anime). `scripts/bootstrap-merge-locks.py` reconstructs `merge.lock` (and `checked-isolated-entries.txt`)
+from any good release, so a fork can jump from 0% to most-of-the-way reviewed without hand-reviewing anything.
+The initial import (2026-07-14, against the `2026-27` release) took the fork to **~89% reviewed**.
+
+Fetch a release (for example
+`https://github.com/manami-project/anime-offline-database/releases/download/2026-27/anime-offline-database-minified.json`),
+then run:
+
+```
+scripts/bootstrap-merge-locks.py anime-offline-database-minified.json \
+  -o review-data/merge.lock \
+  --fork-db ~/anime-offline-database/anime-offline-database-minified.json \
+  --restrict-to-fork \
+  --checked-isolated review-data/checked-isolated-entries.txt
+```
+
+| Argument | Meaning |
+| --- | --- |
+| `<upstream>.json` (positional) | The known-good release to reconstruct groupings from. |
+| `-o, --output` | Where to write the generated `merge.lock`. |
+| `--fork-db PATH` | The fork's own dataset. Required for `--restrict-to-fork` and `--checked-isolated`. |
+| `--restrict-to-fork` | Keep only merge-lock sources already present in `--fork-db`, i.e. providers the fork actually crawls. **Use this.** Without it, the dead-entries validator aborts the reprocess on any source from an uncrawled provider (it has no DCS file, so it looks "dead"). |
+| `--checked-isolated PATH` | Also write `checked-isolated-entries.txt`, certifying only entries that are single-source in **both** the fork and upstream (so an entry that gained a provider in the fork's newer crawl is not wrongly frozen as never-merge). |
+| `--only-hosts a,b,c` | Optional explicit allowlist of provider hostnames. Redundant with `--restrict-to-fork` (which already limits to crawled providers), so normally omit it. |
+
+The script never writes into the DCS directory itself. Review the output, keep the canonical copies in
+`review-data/`, then copy both files into `<modb.app.downloadControlStateDirectory>/` and run **`[r]` Reprocess
+merging** in the analyzer (or a full app run) to force-merge the fork's fragmented entries into the upstream
+grouping.
+
+Because `--restrict-to-fork` drops the uncrawled half of any cross-provider pair, entries whose only partner
+is a currently-deactivated provider stay unreviewed until that provider is crawled. Reactivating those
+providers and re-running the bootstrap folds them all back in at once — see TODO item 2 for the exact
+crawl-first ordering, and the "Dead-entries validator" note under [Possible improvements](#possible-improvements)
+for the code change that would remove the `--restrict-to-fork` requirement.
+
 ### Reviewing entries (the analyzer)
 
 Review is done through the **analyzer**, a separate interactive terminal program — not by hand-editing
