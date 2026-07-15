@@ -27,10 +27,40 @@ import sys
 from urllib.parse import urlparse
 
 
+# Hosts that appear in the dataset's `sources` but are not crawlable metadata providers. animecountdown.com is a
+# derived countdown link the app adds at build time, not a real source. It must be excluded from both merge.lock
+# and checked-isolated: it is not a source to lock, and the app's dead-entries validator has no case for it and
+# throws on it. Excluding it also means an entry like [mal, animecountdown] is correctly treated as MAL-only.
+EXCLUDED_HOSTS = {"animecountdown.com"}
+
+
 def host_of(url):
     # Strip a leading "www." so --only-hosts can use the bare provider hostname.
     netloc = urlparse(url).netloc.lower()
     return netloc[4:] if netloc.startswith("www.") else netloc
+
+
+def real_sources(entry, only_hosts, present=None):
+    result = []
+    for s in entry.get("sources", []):
+        h = host_of(s)
+        if h in EXCLUDED_HOSTS:
+            continue
+        if only_hosts is not None and h not in only_hosts:
+            continue
+        # present: restrict to sources the fork actually crawled. A merge.lock source with no crawled entry has
+        # no DCS file, and the dead-entries validator flags it as dead and aborts, so those must be dropped.
+        if present is not None and s not in present:
+            continue
+        result.append(s)
+    return result
+
+
+def all_sources(entries):
+    result = set()
+    for entry in entries:
+        result.update(entry.get("sources", []))
+    return result
 
 
 def load_entries(path):
@@ -40,23 +70,22 @@ def load_entries(path):
     return doc["data"] if isinstance(doc, dict) and "data" in doc else doc
 
 
-def build_groups(entries, only_hosts):
+def build_groups(entries, only_hosts, present=None):
     groups = []
     for entry in entries:
-        sources = entry.get("sources", [])
-        if only_hosts is not None:
-            sources = [s for s in sources if host_of(s) in only_hosts]
-        # A group is only meaningful with two or more sources to lock together.
+        sources = real_sources(entry, only_hosts, present)
+        # A group is only meaningful with two or more real sources to lock together.
         if len(sources) >= 2:
             groups.append(sorted(sources))
     return groups
 
 
 def single_source_urls(entries):
-    # URLs of entries that have exactly one source, i.e. entries this dataset considers standalone.
+    # URLs of entries that have exactly one real source, i.e. entries this dataset considers standalone
+    # (ignoring derived hosts like animecountdown.com).
     result = set()
     for entry in entries:
-        sources = entry.get("sources", [])
+        sources = real_sources(entry, None)
         if len(sources) == 1:
             result.add(sources[0])
     return result
@@ -83,7 +112,7 @@ def report_fork_impact(groups, fork_db_path):
     single_source = 0
     single_source_that_would_merge = 0
     for entry in entries:
-        sources = entry.get("sources", [])
+        sources = real_sources(entry, None)
         if len(sources) == 1:
             single_source += 1
             if sources[0] in locked:
@@ -106,7 +135,14 @@ def main():
         help="Comma-separated hostnames to keep (e.g. myanimelist.net,anilist.co). Sources from other providers "
         "are dropped and groups that fall below two sources are skipped. Default: keep every source.",
     )
-    parser.add_argument("--fork-db", default=None, help="Optional path to the fork's dataset JSON; prints how many of its single-source entries would merge. Also required for --checked-isolated.")
+    parser.add_argument("--fork-db", default=None, help="Optional path to the fork's dataset JSON; prints how many of its single-source entries would merge. Also required for --checked-isolated and --restrict-to-fork.")
+    parser.add_argument(
+        "--restrict-to-fork",
+        action="store_true",
+        help="Keep only merge-lock sources that already exist in --fork-db (i.e. providers the fork actually "
+        "crawls). Prevents the dead-entries validator from aborting on uncrawled providers. Re-run without this "
+        "(or re-run after expanding your crawl coverage) to widen the groups later.",
+    )
     parser.add_argument(
         "--checked-isolated",
         default=None,
@@ -120,8 +156,14 @@ def main():
     if args.only_hosts:
         only_hosts = {h.strip().lower() for h in args.only_hosts.split(",") if h.strip()}
 
+    present = None
+    if args.restrict_to_fork:
+        if not args.fork_db:
+            raise SystemExit("error: --restrict-to-fork requires --fork-db.")
+        present = all_sources(load_entries(args.fork_db))
+
     entries = load_entries(args.official_db)
-    groups = build_groups(entries, only_hosts)
+    groups = build_groups(entries, only_hosts, present)
     total_sources = check_no_duplicate_source(groups)
 
     with open(args.output, "w", encoding="utf-8") as handle:

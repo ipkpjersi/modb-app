@@ -316,6 +316,7 @@ object Analyzer {
         Reprocessor.reprocess()
         datasetEntries.clear()
         populateInMemoryDataset()
+        println("\nReprocessing merging complete. Dataset rewritten with ${datasetEntries.size} entries.")
     }
 
     private suspend fun populateInMemoryDataset() {

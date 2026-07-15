@@ -43,6 +43,14 @@ fetches) through a reverse SSH tunnel to a residential connection.
   it with no other change — verified, not assumed.
 - Once in place, re-enable anidb/anime-planet/simkl/anisearch by removing their hostnames from
   `deactivatedMetaDataProviders` in `config.toml`. No rebuild needed.
+- **Re-run the merge-lock bootstrap after reactivating.** `scripts/bootstrap-merge-locks.py` rebuilds
+  `merge.lock` (+ `checked-isolated-entries.txt`) from an upstream anime-offline-database release; canonical
+  copies live in `review-data/`. The initial import (2026-07-14) used `--restrict-to-fork` so `merge.lock`
+  only references providers the fork actually crawls, because `DeadEntriesValidationPostProcessor` aborts on
+  merge.lock sources that have no DCS file (an uncrawled provider looks "dead" to it). Once the residential
+  providers are crawling, re-run against a current upstream release **without** `--restrict-to-fork` and
+  reprocess: that folds anidb/anime-planet/simkl (and full anisearch) into the existing groups, reuniting the
+  cross-provider splits and lifting "reviewed" from ~89% back toward upstream's ~98%.
 
 ### Handle the stale DCS entries when reactivating
 

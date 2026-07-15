@@ -478,6 +478,7 @@ https://anilist.co/anime/199955
 https://anilist.co/anime/200378
 https://anilist.co/anime/200639
 https://anilist.co/anime/201851
+https://anilist.co/anime/202387
 https://anilist.co/anime/202846
 https://anilist.co/anime/202851
 https://anilist.co/anime/203146
@@ -591,6 +592,7 @@ https://anilist.co/anime/213068
 https://anilist.co/anime/213103
 https://anilist.co/anime/213188
 https://anilist.co/anime/213362
+https://anilist.co/anime/213364
 https://anilist.co/anime/213365
 https://anilist.co/anime/213377
 https://anilist.co/anime/213378
@@ -653,6 +655,7 @@ https://animenewsnetwork.com/encyclopedia/anime.php?id=10762
 https://animenewsnetwork.com/encyclopedia/anime.php?id=10817
 https://animenewsnetwork.com/encyclopedia/anime.php?id=1094
 https://animenewsnetwork.com/encyclopedia/anime.php?id=10953
+https://animenewsnetwork.com/encyclopedia/anime.php?id=10958
 https://animenewsnetwork.com/encyclopedia/anime.php?id=10973
 https://animenewsnetwork.com/encyclopedia/anime.php?id=1101
 https://animenewsnetwork.com/encyclopedia/anime.php?id=1102
@@ -665,6 +668,7 @@ https://animenewsnetwork.com/encyclopedia/anime.php?id=1111
 https://animenewsnetwork.com/encyclopedia/anime.php?id=11119
 https://animenewsnetwork.com/encyclopedia/anime.php?id=11133
 https://animenewsnetwork.com/encyclopedia/anime.php?id=11178
+https://animenewsnetwork.com/encyclopedia/anime.php?id=11194
 https://animenewsnetwork.com/encyclopedia/anime.php?id=11203
 https://animenewsnetwork.com/encyclopedia/anime.php?id=11210
 https://animenewsnetwork.com/encyclopedia/anime.php?id=11216
@@ -748,6 +752,7 @@ https://animenewsnetwork.com/encyclopedia/anime.php?id=11945
 https://animenewsnetwork.com/encyclopedia/anime.php?id=11963
 https://animenewsnetwork.com/encyclopedia/anime.php?id=11965
 https://animenewsnetwork.com/encyclopedia/anime.php?id=1197
+https://animenewsnetwork.com/encyclopedia/anime.php?id=1209
 https://animenewsnetwork.com/encyclopedia/anime.php?id=12105
 https://animenewsnetwork.com/encyclopedia/anime.php?id=12116
 https://animenewsnetwork.com/encyclopedia/anime.php?id=12127
@@ -763,6 +768,7 @@ https://animenewsnetwork.com/encyclopedia/anime.php?id=12304
 https://animenewsnetwork.com/encyclopedia/anime.php?id=1231
 https://animenewsnetwork.com/encyclopedia/anime.php?id=12323
 https://animenewsnetwork.com/encyclopedia/anime.php?id=12329
+https://animenewsnetwork.com/encyclopedia/anime.php?id=1235
 https://animenewsnetwork.com/encyclopedia/anime.php?id=12375
 https://animenewsnetwork.com/encyclopedia/anime.php?id=12394
 https://animenewsnetwork.com/encyclopedia/anime.php?id=12398
@@ -784,6 +790,7 @@ https://animenewsnetwork.com/encyclopedia/anime.php?id=1257
 https://animenewsnetwork.com/encyclopedia/anime.php?id=12571
 https://animenewsnetwork.com/encyclopedia/anime.php?id=1258
 https://animenewsnetwork.com/encyclopedia/anime.php?id=1259
+https://animenewsnetwork.com/encyclopedia/anime.php?id=1260
 https://animenewsnetwork.com/encyclopedia/anime.php?id=12620
 https://animenewsnetwork.com/encyclopedia/anime.php?id=1272
 https://animenewsnetwork.com/encyclopedia/anime.php?id=1273
@@ -853,6 +860,7 @@ https://animenewsnetwork.com/encyclopedia/anime.php?id=13713
 https://animenewsnetwork.com/encyclopedia/anime.php?id=13718
 https://animenewsnetwork.com/encyclopedia/anime.php?id=1372
 https://animenewsnetwork.com/encyclopedia/anime.php?id=13749
+https://animenewsnetwork.com/encyclopedia/anime.php?id=13756
 https://animenewsnetwork.com/encyclopedia/anime.php?id=13765
 https://animenewsnetwork.com/encyclopedia/anime.php?id=1377
 https://animenewsnetwork.com/encyclopedia/anime.php?id=13776
@@ -878,6 +886,7 @@ https://animenewsnetwork.com/encyclopedia/anime.php?id=14100
 https://animenewsnetwork.com/encyclopedia/anime.php?id=14113
 https://animenewsnetwork.com/encyclopedia/anime.php?id=14118
 https://animenewsnetwork.com/encyclopedia/anime.php?id=1412
+https://animenewsnetwork.com/encyclopedia/anime.php?id=14173
 https://animenewsnetwork.com/encyclopedia/anime.php?id=14175
 https://animenewsnetwork.com/encyclopedia/anime.php?id=14182
 https://animenewsnetwork.com/encyclopedia/anime.php?id=14186
@@ -953,6 +962,7 @@ https://animenewsnetwork.com/encyclopedia/anime.php?id=1498
 https://animenewsnetwork.com/encyclopedia/anime.php?id=14991
 https://animenewsnetwork.com/encyclopedia/anime.php?id=150
 https://animenewsnetwork.com/encyclopedia/anime.php?id=15026
+https://animenewsnetwork.com/encyclopedia/anime.php?id=15036
 https://animenewsnetwork.com/encyclopedia/anime.php?id=15037
 https://animenewsnetwork.com/encyclopedia/anime.php?id=15044
 https://animenewsnetwork.com/encyclopedia/anime.php?id=15055
@@ -980,6 +990,7 @@ https://animenewsnetwork.com/encyclopedia/anime.php?id=15254
 https://animenewsnetwork.com/encyclopedia/anime.php?id=15256
 https://animenewsnetwork.com/encyclopedia/anime.php?id=15257
 https://animenewsnetwork.com/encyclopedia/anime.php?id=15262
+https://animenewsnetwork.com/encyclopedia/anime.php?id=15263
 https://animenewsnetwork.com/encyclopedia/anime.php?id=15265
 https://animenewsnetwork.com/encyclopedia/anime.php?id=15275
 https://animenewsnetwork.com/encyclopedia/anime.php?id=15297
@@ -1033,7 +1044,9 @@ https://animenewsnetwork.com/encyclopedia/anime.php?id=15634
 https://animenewsnetwork.com/encyclopedia/anime.php?id=15635
 https://animenewsnetwork.com/encyclopedia/anime.php?id=15658
 https://animenewsnetwork.com/encyclopedia/anime.php?id=15659
+https://animenewsnetwork.com/encyclopedia/anime.php?id=15660
 https://animenewsnetwork.com/encyclopedia/anime.php?id=15663
+https://animenewsnetwork.com/encyclopedia/anime.php?id=15664
 https://animenewsnetwork.com/encyclopedia/anime.php?id=15665
 https://animenewsnetwork.com/encyclopedia/anime.php?id=15666
 https://animenewsnetwork.com/encyclopedia/anime.php?id=15668
@@ -1101,6 +1114,7 @@ https://animenewsnetwork.com/encyclopedia/anime.php?id=1666
 https://animenewsnetwork.com/encyclopedia/anime.php?id=16675
 https://animenewsnetwork.com/encyclopedia/anime.php?id=1671
 https://animenewsnetwork.com/encyclopedia/anime.php?id=16753
+https://animenewsnetwork.com/encyclopedia/anime.php?id=16760
 https://animenewsnetwork.com/encyclopedia/anime.php?id=16804
 https://animenewsnetwork.com/encyclopedia/anime.php?id=16836
 https://animenewsnetwork.com/encyclopedia/anime.php?id=1685
@@ -1203,6 +1217,7 @@ https://animenewsnetwork.com/encyclopedia/anime.php?id=17921
 https://animenewsnetwork.com/encyclopedia/anime.php?id=17964
 https://animenewsnetwork.com/encyclopedia/anime.php?id=17994
 https://animenewsnetwork.com/encyclopedia/anime.php?id=1800
+https://animenewsnetwork.com/encyclopedia/anime.php?id=18001
 https://animenewsnetwork.com/encyclopedia/anime.php?id=1801
 https://animenewsnetwork.com/encyclopedia/anime.php?id=18036
 https://animenewsnetwork.com/encyclopedia/anime.php?id=18045
@@ -1222,6 +1237,7 @@ https://animenewsnetwork.com/encyclopedia/anime.php?id=1837
 https://animenewsnetwork.com/encyclopedia/anime.php?id=18412
 https://animenewsnetwork.com/encyclopedia/anime.php?id=18459
 https://animenewsnetwork.com/encyclopedia/anime.php?id=18473
+https://animenewsnetwork.com/encyclopedia/anime.php?id=1849
 https://animenewsnetwork.com/encyclopedia/anime.php?id=18490
 https://animenewsnetwork.com/encyclopedia/anime.php?id=18493
 https://animenewsnetwork.com/encyclopedia/anime.php?id=1851
@@ -1234,7 +1250,9 @@ https://animenewsnetwork.com/encyclopedia/anime.php?id=18688
 https://animenewsnetwork.com/encyclopedia/anime.php?id=18692
 https://animenewsnetwork.com/encyclopedia/anime.php?id=18698
 https://animenewsnetwork.com/encyclopedia/anime.php?id=18711
+https://animenewsnetwork.com/encyclopedia/anime.php?id=1872
 https://animenewsnetwork.com/encyclopedia/anime.php?id=18724
+https://animenewsnetwork.com/encyclopedia/anime.php?id=18728
 https://animenewsnetwork.com/encyclopedia/anime.php?id=18732
 https://animenewsnetwork.com/encyclopedia/anime.php?id=18745
 https://animenewsnetwork.com/encyclopedia/anime.php?id=18746
@@ -1270,6 +1288,7 @@ https://animenewsnetwork.com/encyclopedia/anime.php?id=19255
 https://animenewsnetwork.com/encyclopedia/anime.php?id=19307
 https://animenewsnetwork.com/encyclopedia/anime.php?id=19311
 https://animenewsnetwork.com/encyclopedia/anime.php?id=19355
+https://animenewsnetwork.com/encyclopedia/anime.php?id=19391
 https://animenewsnetwork.com/encyclopedia/anime.php?id=19392
 https://animenewsnetwork.com/encyclopedia/anime.php?id=19397
 https://animenewsnetwork.com/encyclopedia/anime.php?id=19416
@@ -1289,10 +1308,14 @@ https://animenewsnetwork.com/encyclopedia/anime.php?id=19745
 https://animenewsnetwork.com/encyclopedia/anime.php?id=19758
 https://animenewsnetwork.com/encyclopedia/anime.php?id=19772
 https://animenewsnetwork.com/encyclopedia/anime.php?id=19778
+https://animenewsnetwork.com/encyclopedia/anime.php?id=19779
 https://animenewsnetwork.com/encyclopedia/anime.php?id=19806
 https://animenewsnetwork.com/encyclopedia/anime.php?id=19818
+https://animenewsnetwork.com/encyclopedia/anime.php?id=19820
+https://animenewsnetwork.com/encyclopedia/anime.php?id=19821
 https://animenewsnetwork.com/encyclopedia/anime.php?id=1983
 https://animenewsnetwork.com/encyclopedia/anime.php?id=19838
+https://animenewsnetwork.com/encyclopedia/anime.php?id=19839
 https://animenewsnetwork.com/encyclopedia/anime.php?id=19842
 https://animenewsnetwork.com/encyclopedia/anime.php?id=19877
 https://animenewsnetwork.com/encyclopedia/anime.php?id=19882
@@ -1312,6 +1335,7 @@ https://animenewsnetwork.com/encyclopedia/anime.php?id=20013
 https://animenewsnetwork.com/encyclopedia/anime.php?id=20018
 https://animenewsnetwork.com/encyclopedia/anime.php?id=2004
 https://animenewsnetwork.com/encyclopedia/anime.php?id=20053
+https://animenewsnetwork.com/encyclopedia/anime.php?id=20055
 https://animenewsnetwork.com/encyclopedia/anime.php?id=20058
 https://animenewsnetwork.com/encyclopedia/anime.php?id=20073
 https://animenewsnetwork.com/encyclopedia/anime.php?id=2010
@@ -1321,6 +1345,7 @@ https://animenewsnetwork.com/encyclopedia/anime.php?id=20158
 https://animenewsnetwork.com/encyclopedia/anime.php?id=20160
 https://animenewsnetwork.com/encyclopedia/anime.php?id=20174
 https://animenewsnetwork.com/encyclopedia/anime.php?id=20194
+https://animenewsnetwork.com/encyclopedia/anime.php?id=20199
 https://animenewsnetwork.com/encyclopedia/anime.php?id=2027
 https://animenewsnetwork.com/encyclopedia/anime.php?id=20348
 https://animenewsnetwork.com/encyclopedia/anime.php?id=20365
@@ -1341,6 +1366,8 @@ https://animenewsnetwork.com/encyclopedia/anime.php?id=2040
 https://animenewsnetwork.com/encyclopedia/anime.php?id=2041
 https://animenewsnetwork.com/encyclopedia/anime.php?id=2044
 https://animenewsnetwork.com/encyclopedia/anime.php?id=2046
+https://animenewsnetwork.com/encyclopedia/anime.php?id=20461
+https://animenewsnetwork.com/encyclopedia/anime.php?id=20462
 https://animenewsnetwork.com/encyclopedia/anime.php?id=20465
 https://animenewsnetwork.com/encyclopedia/anime.php?id=20466
 https://animenewsnetwork.com/encyclopedia/anime.php?id=20489
@@ -1367,6 +1394,7 @@ https://animenewsnetwork.com/encyclopedia/anime.php?id=20690
 https://animenewsnetwork.com/encyclopedia/anime.php?id=20732
 https://animenewsnetwork.com/encyclopedia/anime.php?id=2075
 https://animenewsnetwork.com/encyclopedia/anime.php?id=20763
+https://animenewsnetwork.com/encyclopedia/anime.php?id=20782
 https://animenewsnetwork.com/encyclopedia/anime.php?id=20785
 https://animenewsnetwork.com/encyclopedia/anime.php?id=20790
 https://animenewsnetwork.com/encyclopedia/anime.php?id=20816
@@ -1383,6 +1411,7 @@ https://animenewsnetwork.com/encyclopedia/anime.php?id=21100
 https://animenewsnetwork.com/encyclopedia/anime.php?id=21106
 https://animenewsnetwork.com/encyclopedia/anime.php?id=21119
 https://animenewsnetwork.com/encyclopedia/anime.php?id=21120
+https://animenewsnetwork.com/encyclopedia/anime.php?id=21126
 https://animenewsnetwork.com/encyclopedia/anime.php?id=21128
 https://animenewsnetwork.com/encyclopedia/anime.php?id=21134
 https://animenewsnetwork.com/encyclopedia/anime.php?id=21145
@@ -1418,6 +1447,7 @@ https://animenewsnetwork.com/encyclopedia/anime.php?id=21674
 https://animenewsnetwork.com/encyclopedia/anime.php?id=21704
 https://animenewsnetwork.com/encyclopedia/anime.php?id=2173
 https://animenewsnetwork.com/encyclopedia/anime.php?id=2178
+https://animenewsnetwork.com/encyclopedia/anime.php?id=2180
 https://animenewsnetwork.com/encyclopedia/anime.php?id=21818
 https://animenewsnetwork.com/encyclopedia/anime.php?id=21827
 https://animenewsnetwork.com/encyclopedia/anime.php?id=21829
@@ -1429,6 +1459,7 @@ https://animenewsnetwork.com/encyclopedia/anime.php?id=21882
 https://animenewsnetwork.com/encyclopedia/anime.php?id=21889
 https://animenewsnetwork.com/encyclopedia/anime.php?id=21894
 https://animenewsnetwork.com/encyclopedia/anime.php?id=21896
+https://animenewsnetwork.com/encyclopedia/anime.php?id=21942
 https://animenewsnetwork.com/encyclopedia/anime.php?id=21959
 https://animenewsnetwork.com/encyclopedia/anime.php?id=2197
 https://animenewsnetwork.com/encyclopedia/anime.php?id=21975
@@ -1471,10 +1502,10 @@ https://animenewsnetwork.com/encyclopedia/anime.php?id=22355
 https://animenewsnetwork.com/encyclopedia/anime.php?id=22386
 https://animenewsnetwork.com/encyclopedia/anime.php?id=2240
 https://animenewsnetwork.com/encyclopedia/anime.php?id=22403
-https://animenewsnetwork.com/encyclopedia/anime.php?id=22409
 https://animenewsnetwork.com/encyclopedia/anime.php?id=22411
 https://animenewsnetwork.com/encyclopedia/anime.php?id=22414
 https://animenewsnetwork.com/encyclopedia/anime.php?id=2242
+https://animenewsnetwork.com/encyclopedia/anime.php?id=22439
 https://animenewsnetwork.com/encyclopedia/anime.php?id=22447
 https://animenewsnetwork.com/encyclopedia/anime.php?id=22452
 https://animenewsnetwork.com/encyclopedia/anime.php?id=22465
@@ -1496,7 +1527,9 @@ https://animenewsnetwork.com/encyclopedia/anime.php?id=22557
 https://animenewsnetwork.com/encyclopedia/anime.php?id=22566
 https://animenewsnetwork.com/encyclopedia/anime.php?id=22567
 https://animenewsnetwork.com/encyclopedia/anime.php?id=22568
+https://animenewsnetwork.com/encyclopedia/anime.php?id=2258
 https://animenewsnetwork.com/encyclopedia/anime.php?id=22595
+https://animenewsnetwork.com/encyclopedia/anime.php?id=226
 https://animenewsnetwork.com/encyclopedia/anime.php?id=22603
 https://animenewsnetwork.com/encyclopedia/anime.php?id=22606
 https://animenewsnetwork.com/encyclopedia/anime.php?id=2268
@@ -1519,6 +1552,7 @@ https://animenewsnetwork.com/encyclopedia/anime.php?id=23003
 https://animenewsnetwork.com/encyclopedia/anime.php?id=23006
 https://animenewsnetwork.com/encyclopedia/anime.php?id=23015
 https://animenewsnetwork.com/encyclopedia/anime.php?id=23022
+https://animenewsnetwork.com/encyclopedia/anime.php?id=23025
 https://animenewsnetwork.com/encyclopedia/anime.php?id=23032
 https://animenewsnetwork.com/encyclopedia/anime.php?id=23037
 https://animenewsnetwork.com/encyclopedia/anime.php?id=23041
@@ -1539,10 +1573,12 @@ https://animenewsnetwork.com/encyclopedia/anime.php?id=2311
 https://animenewsnetwork.com/encyclopedia/anime.php?id=23111
 https://animenewsnetwork.com/encyclopedia/anime.php?id=23115
 https://animenewsnetwork.com/encyclopedia/anime.php?id=23123
+https://animenewsnetwork.com/encyclopedia/anime.php?id=23124
 https://animenewsnetwork.com/encyclopedia/anime.php?id=23131
 https://animenewsnetwork.com/encyclopedia/anime.php?id=23134
 https://animenewsnetwork.com/encyclopedia/anime.php?id=23143
 https://animenewsnetwork.com/encyclopedia/anime.php?id=23155
+https://animenewsnetwork.com/encyclopedia/anime.php?id=23157
 https://animenewsnetwork.com/encyclopedia/anime.php?id=23158
 https://animenewsnetwork.com/encyclopedia/anime.php?id=23166
 https://animenewsnetwork.com/encyclopedia/anime.php?id=23167
@@ -1565,6 +1601,7 @@ https://animenewsnetwork.com/encyclopedia/anime.php?id=23265
 https://animenewsnetwork.com/encyclopedia/anime.php?id=23267
 https://animenewsnetwork.com/encyclopedia/anime.php?id=23277
 https://animenewsnetwork.com/encyclopedia/anime.php?id=23299
+https://animenewsnetwork.com/encyclopedia/anime.php?id=23300
 https://animenewsnetwork.com/encyclopedia/anime.php?id=23329
 https://animenewsnetwork.com/encyclopedia/anime.php?id=23330
 https://animenewsnetwork.com/encyclopedia/anime.php?id=23335
@@ -1582,6 +1619,7 @@ https://animenewsnetwork.com/encyclopedia/anime.php?id=23400
 https://animenewsnetwork.com/encyclopedia/anime.php?id=23402
 https://animenewsnetwork.com/encyclopedia/anime.php?id=23403
 https://animenewsnetwork.com/encyclopedia/anime.php?id=23404
+https://animenewsnetwork.com/encyclopedia/anime.php?id=23405
 https://animenewsnetwork.com/encyclopedia/anime.php?id=2341
 https://animenewsnetwork.com/encyclopedia/anime.php?id=23413
 https://animenewsnetwork.com/encyclopedia/anime.php?id=23451
@@ -1604,6 +1642,7 @@ https://animenewsnetwork.com/encyclopedia/anime.php?id=2357
 https://animenewsnetwork.com/encyclopedia/anime.php?id=23571
 https://animenewsnetwork.com/encyclopedia/anime.php?id=23572
 https://animenewsnetwork.com/encyclopedia/anime.php?id=23575
+https://animenewsnetwork.com/encyclopedia/anime.php?id=23576
 https://animenewsnetwork.com/encyclopedia/anime.php?id=2359
 https://animenewsnetwork.com/encyclopedia/anime.php?id=23593
 https://animenewsnetwork.com/encyclopedia/anime.php?id=23594
@@ -1658,12 +1697,14 @@ https://animenewsnetwork.com/encyclopedia/anime.php?id=23916
 https://animenewsnetwork.com/encyclopedia/anime.php?id=23924
 https://animenewsnetwork.com/encyclopedia/anime.php?id=23927
 https://animenewsnetwork.com/encyclopedia/anime.php?id=2393
+https://animenewsnetwork.com/encyclopedia/anime.php?id=23937
 https://animenewsnetwork.com/encyclopedia/anime.php?id=23939
 https://animenewsnetwork.com/encyclopedia/anime.php?id=23951
 https://animenewsnetwork.com/encyclopedia/anime.php?id=23953
 https://animenewsnetwork.com/encyclopedia/anime.php?id=23957
 https://animenewsnetwork.com/encyclopedia/anime.php?id=23960
 https://animenewsnetwork.com/encyclopedia/anime.php?id=23964
+https://animenewsnetwork.com/encyclopedia/anime.php?id=23968
 https://animenewsnetwork.com/encyclopedia/anime.php?id=23976
 https://animenewsnetwork.com/encyclopedia/anime.php?id=23977
 https://animenewsnetwork.com/encyclopedia/anime.php?id=23978
@@ -1709,6 +1750,7 @@ https://animenewsnetwork.com/encyclopedia/anime.php?id=24230
 https://animenewsnetwork.com/encyclopedia/anime.php?id=24231
 https://animenewsnetwork.com/encyclopedia/anime.php?id=24232
 https://animenewsnetwork.com/encyclopedia/anime.php?id=24233
+https://animenewsnetwork.com/encyclopedia/anime.php?id=24248
 https://animenewsnetwork.com/encyclopedia/anime.php?id=24297
 https://animenewsnetwork.com/encyclopedia/anime.php?id=24304
 https://animenewsnetwork.com/encyclopedia/anime.php?id=24314
@@ -1727,6 +1769,7 @@ https://animenewsnetwork.com/encyclopedia/anime.php?id=24365
 https://animenewsnetwork.com/encyclopedia/anime.php?id=24376
 https://animenewsnetwork.com/encyclopedia/anime.php?id=24381
 https://animenewsnetwork.com/encyclopedia/anime.php?id=24384
+https://animenewsnetwork.com/encyclopedia/anime.php?id=24387
 https://animenewsnetwork.com/encyclopedia/anime.php?id=24416
 https://animenewsnetwork.com/encyclopedia/anime.php?id=24417
 https://animenewsnetwork.com/encyclopedia/anime.php?id=24418
@@ -1758,6 +1801,7 @@ https://animenewsnetwork.com/encyclopedia/anime.php?id=24594
 https://animenewsnetwork.com/encyclopedia/anime.php?id=24595
 https://animenewsnetwork.com/encyclopedia/anime.php?id=24602
 https://animenewsnetwork.com/encyclopedia/anime.php?id=24604
+https://animenewsnetwork.com/encyclopedia/anime.php?id=24619
 https://animenewsnetwork.com/encyclopedia/anime.php?id=2462
 https://animenewsnetwork.com/encyclopedia/anime.php?id=24622
 https://animenewsnetwork.com/encyclopedia/anime.php?id=24624
@@ -1782,6 +1826,7 @@ https://animenewsnetwork.com/encyclopedia/anime.php?id=24742
 https://animenewsnetwork.com/encyclopedia/anime.php?id=2475
 https://animenewsnetwork.com/encyclopedia/anime.php?id=24754
 https://animenewsnetwork.com/encyclopedia/anime.php?id=24776
+https://animenewsnetwork.com/encyclopedia/anime.php?id=2478
 https://animenewsnetwork.com/encyclopedia/anime.php?id=24782
 https://animenewsnetwork.com/encyclopedia/anime.php?id=24784
 https://animenewsnetwork.com/encyclopedia/anime.php?id=24785
@@ -1794,6 +1839,7 @@ https://animenewsnetwork.com/encyclopedia/anime.php?id=24845
 https://animenewsnetwork.com/encyclopedia/anime.php?id=24853
 https://animenewsnetwork.com/encyclopedia/anime.php?id=2486
 https://animenewsnetwork.com/encyclopedia/anime.php?id=24874
+https://animenewsnetwork.com/encyclopedia/anime.php?id=24877
 https://animenewsnetwork.com/encyclopedia/anime.php?id=24887
 https://animenewsnetwork.com/encyclopedia/anime.php?id=24888
 https://animenewsnetwork.com/encyclopedia/anime.php?id=24891
@@ -1801,12 +1847,14 @@ https://animenewsnetwork.com/encyclopedia/anime.php?id=24892
 https://animenewsnetwork.com/encyclopedia/anime.php?id=24894
 https://animenewsnetwork.com/encyclopedia/anime.php?id=24895
 https://animenewsnetwork.com/encyclopedia/anime.php?id=249
+https://animenewsnetwork.com/encyclopedia/anime.php?id=24912
 https://animenewsnetwork.com/encyclopedia/anime.php?id=24932
 https://animenewsnetwork.com/encyclopedia/anime.php?id=24934
 https://animenewsnetwork.com/encyclopedia/anime.php?id=24949
 https://animenewsnetwork.com/encyclopedia/anime.php?id=24950
 https://animenewsnetwork.com/encyclopedia/anime.php?id=24952
 https://animenewsnetwork.com/encyclopedia/anime.php?id=24959
+https://animenewsnetwork.com/encyclopedia/anime.php?id=24967
 https://animenewsnetwork.com/encyclopedia/anime.php?id=24968
 https://animenewsnetwork.com/encyclopedia/anime.php?id=24969
 https://animenewsnetwork.com/encyclopedia/anime.php?id=24975
@@ -1829,6 +1877,7 @@ https://animenewsnetwork.com/encyclopedia/anime.php?id=25067
 https://animenewsnetwork.com/encyclopedia/anime.php?id=25072
 https://animenewsnetwork.com/encyclopedia/anime.php?id=25075
 https://animenewsnetwork.com/encyclopedia/anime.php?id=25093
+https://animenewsnetwork.com/encyclopedia/anime.php?id=25096
 https://animenewsnetwork.com/encyclopedia/anime.php?id=25109
 https://animenewsnetwork.com/encyclopedia/anime.php?id=25115
 https://animenewsnetwork.com/encyclopedia/anime.php?id=25127
@@ -1838,6 +1887,7 @@ https://animenewsnetwork.com/encyclopedia/anime.php?id=25145
 https://animenewsnetwork.com/encyclopedia/anime.php?id=25221
 https://animenewsnetwork.com/encyclopedia/anime.php?id=25227
 https://animenewsnetwork.com/encyclopedia/anime.php?id=2523
+https://animenewsnetwork.com/encyclopedia/anime.php?id=25245
 https://animenewsnetwork.com/encyclopedia/anime.php?id=25246
 https://animenewsnetwork.com/encyclopedia/anime.php?id=25247
 https://animenewsnetwork.com/encyclopedia/anime.php?id=2525
@@ -1860,6 +1910,7 @@ https://animenewsnetwork.com/encyclopedia/anime.php?id=25429
 https://animenewsnetwork.com/encyclopedia/anime.php?id=25430
 https://animenewsnetwork.com/encyclopedia/anime.php?id=25436
 https://animenewsnetwork.com/encyclopedia/anime.php?id=25439
+https://animenewsnetwork.com/encyclopedia/anime.php?id=2544
 https://animenewsnetwork.com/encyclopedia/anime.php?id=25441
 https://animenewsnetwork.com/encyclopedia/anime.php?id=25449
 https://animenewsnetwork.com/encyclopedia/anime.php?id=25450
@@ -1921,6 +1972,7 @@ https://animenewsnetwork.com/encyclopedia/anime.php?id=26312
 https://animenewsnetwork.com/encyclopedia/anime.php?id=26321
 https://animenewsnetwork.com/encyclopedia/anime.php?id=26324
 https://animenewsnetwork.com/encyclopedia/anime.php?id=26325
+https://animenewsnetwork.com/encyclopedia/anime.php?id=26336
 https://animenewsnetwork.com/encyclopedia/anime.php?id=26354
 https://animenewsnetwork.com/encyclopedia/anime.php?id=2637
 https://animenewsnetwork.com/encyclopedia/anime.php?id=26383
@@ -1934,9 +1986,11 @@ https://animenewsnetwork.com/encyclopedia/anime.php?id=26494
 https://animenewsnetwork.com/encyclopedia/anime.php?id=26503
 https://animenewsnetwork.com/encyclopedia/anime.php?id=26523
 https://animenewsnetwork.com/encyclopedia/anime.php?id=26524
+https://animenewsnetwork.com/encyclopedia/anime.php?id=26555
 https://animenewsnetwork.com/encyclopedia/anime.php?id=26558
 https://animenewsnetwork.com/encyclopedia/anime.php?id=2656
 https://animenewsnetwork.com/encyclopedia/anime.php?id=26584
+https://animenewsnetwork.com/encyclopedia/anime.php?id=2659
 https://animenewsnetwork.com/encyclopedia/anime.php?id=26663
 https://animenewsnetwork.com/encyclopedia/anime.php?id=26667
 https://animenewsnetwork.com/encyclopedia/anime.php?id=26672
@@ -1994,6 +2048,7 @@ https://animenewsnetwork.com/encyclopedia/anime.php?id=27425
 https://animenewsnetwork.com/encyclopedia/anime.php?id=27459
 https://animenewsnetwork.com/encyclopedia/anime.php?id=2754
 https://animenewsnetwork.com/encyclopedia/anime.php?id=27576
+https://animenewsnetwork.com/encyclopedia/anime.php?id=2759
 https://animenewsnetwork.com/encyclopedia/anime.php?id=27600
 https://animenewsnetwork.com/encyclopedia/anime.php?id=27606
 https://animenewsnetwork.com/encyclopedia/anime.php?id=27608
@@ -2021,6 +2076,7 @@ https://animenewsnetwork.com/encyclopedia/anime.php?id=2832
 https://animenewsnetwork.com/encyclopedia/anime.php?id=28391
 https://animenewsnetwork.com/encyclopedia/anime.php?id=28393
 https://animenewsnetwork.com/encyclopedia/anime.php?id=28394
+https://animenewsnetwork.com/encyclopedia/anime.php?id=2840
 https://animenewsnetwork.com/encyclopedia/anime.php?id=28425
 https://animenewsnetwork.com/encyclopedia/anime.php?id=28475
 https://animenewsnetwork.com/encyclopedia/anime.php?id=28484
@@ -2042,6 +2098,7 @@ https://animenewsnetwork.com/encyclopedia/anime.php?id=28842
 https://animenewsnetwork.com/encyclopedia/anime.php?id=2887
 https://animenewsnetwork.com/encyclopedia/anime.php?id=28888
 https://animenewsnetwork.com/encyclopedia/anime.php?id=28889
+https://animenewsnetwork.com/encyclopedia/anime.php?id=28891
 https://animenewsnetwork.com/encyclopedia/anime.php?id=28894
 https://animenewsnetwork.com/encyclopedia/anime.php?id=28934
 https://animenewsnetwork.com/encyclopedia/anime.php?id=28952
@@ -2055,6 +2112,7 @@ https://animenewsnetwork.com/encyclopedia/anime.php?id=29057
 https://animenewsnetwork.com/encyclopedia/anime.php?id=29061
 https://animenewsnetwork.com/encyclopedia/anime.php?id=29144
 https://animenewsnetwork.com/encyclopedia/anime.php?id=29147
+https://animenewsnetwork.com/encyclopedia/anime.php?id=29197
 https://animenewsnetwork.com/encyclopedia/anime.php?id=29218
 https://animenewsnetwork.com/encyclopedia/anime.php?id=29219
 https://animenewsnetwork.com/encyclopedia/anime.php?id=29221
@@ -2065,6 +2123,7 @@ https://animenewsnetwork.com/encyclopedia/anime.php?id=29339
 https://animenewsnetwork.com/encyclopedia/anime.php?id=2934
 https://animenewsnetwork.com/encyclopedia/anime.php?id=29402
 https://animenewsnetwork.com/encyclopedia/anime.php?id=2941
+https://animenewsnetwork.com/encyclopedia/anime.php?id=2942
 https://animenewsnetwork.com/encyclopedia/anime.php?id=29435
 https://animenewsnetwork.com/encyclopedia/anime.php?id=29437
 https://animenewsnetwork.com/encyclopedia/anime.php?id=2944
@@ -2079,9 +2138,11 @@ https://animenewsnetwork.com/encyclopedia/anime.php?id=29823
 https://animenewsnetwork.com/encyclopedia/anime.php?id=29911
 https://animenewsnetwork.com/encyclopedia/anime.php?id=29925
 https://animenewsnetwork.com/encyclopedia/anime.php?id=29927
+https://animenewsnetwork.com/encyclopedia/anime.php?id=29929
 https://animenewsnetwork.com/encyclopedia/anime.php?id=29952
 https://animenewsnetwork.com/encyclopedia/anime.php?id=29966
 https://animenewsnetwork.com/encyclopedia/anime.php?id=30076
+https://animenewsnetwork.com/encyclopedia/anime.php?id=30077
 https://animenewsnetwork.com/encyclopedia/anime.php?id=30078
 https://animenewsnetwork.com/encyclopedia/anime.php?id=30081
 https://animenewsnetwork.com/encyclopedia/anime.php?id=30101
@@ -2117,6 +2178,7 @@ https://animenewsnetwork.com/encyclopedia/anime.php?id=30906
 https://animenewsnetwork.com/encyclopedia/anime.php?id=30955
 https://animenewsnetwork.com/encyclopedia/anime.php?id=30999
 https://animenewsnetwork.com/encyclopedia/anime.php?id=31013
+https://animenewsnetwork.com/encyclopedia/anime.php?id=31057
 https://animenewsnetwork.com/encyclopedia/anime.php?id=31065
 https://animenewsnetwork.com/encyclopedia/anime.php?id=31079
 https://animenewsnetwork.com/encyclopedia/anime.php?id=31080
@@ -2215,12 +2277,14 @@ https://animenewsnetwork.com/encyclopedia/anime.php?id=33022
 https://animenewsnetwork.com/encyclopedia/anime.php?id=33032
 https://animenewsnetwork.com/encyclopedia/anime.php?id=33056
 https://animenewsnetwork.com/encyclopedia/anime.php?id=3308
+https://animenewsnetwork.com/encyclopedia/anime.php?id=3309
 https://animenewsnetwork.com/encyclopedia/anime.php?id=331
 https://animenewsnetwork.com/encyclopedia/anime.php?id=3312
 https://animenewsnetwork.com/encyclopedia/anime.php?id=33134
 https://animenewsnetwork.com/encyclopedia/anime.php?id=3314
 https://animenewsnetwork.com/encyclopedia/anime.php?id=33144
 https://animenewsnetwork.com/encyclopedia/anime.php?id=3317
+https://animenewsnetwork.com/encyclopedia/anime.php?id=3319
 https://animenewsnetwork.com/encyclopedia/anime.php?id=3320
 https://animenewsnetwork.com/encyclopedia/anime.php?id=3321
 https://animenewsnetwork.com/encyclopedia/anime.php?id=3323
@@ -2238,6 +2302,7 @@ https://animenewsnetwork.com/encyclopedia/anime.php?id=33571
 https://animenewsnetwork.com/encyclopedia/anime.php?id=33587
 https://animenewsnetwork.com/encyclopedia/anime.php?id=33589
 https://animenewsnetwork.com/encyclopedia/anime.php?id=3359
+https://animenewsnetwork.com/encyclopedia/anime.php?id=33600
 https://animenewsnetwork.com/encyclopedia/anime.php?id=33604
 https://animenewsnetwork.com/encyclopedia/anime.php?id=33606
 https://animenewsnetwork.com/encyclopedia/anime.php?id=33607
@@ -2248,6 +2313,7 @@ https://animenewsnetwork.com/encyclopedia/anime.php?id=33622
 https://animenewsnetwork.com/encyclopedia/anime.php?id=33626
 https://animenewsnetwork.com/encyclopedia/anime.php?id=33628
 https://animenewsnetwork.com/encyclopedia/anime.php?id=3363
+https://animenewsnetwork.com/encyclopedia/anime.php?id=33631
 https://animenewsnetwork.com/encyclopedia/anime.php?id=33635
 https://animenewsnetwork.com/encyclopedia/anime.php?id=33636
 https://animenewsnetwork.com/encyclopedia/anime.php?id=3364
@@ -2275,6 +2341,7 @@ https://animenewsnetwork.com/encyclopedia/anime.php?id=33912
 https://animenewsnetwork.com/encyclopedia/anime.php?id=33948
 https://animenewsnetwork.com/encyclopedia/anime.php?id=33957
 https://animenewsnetwork.com/encyclopedia/anime.php?id=33974
+https://animenewsnetwork.com/encyclopedia/anime.php?id=34027
 https://animenewsnetwork.com/encyclopedia/anime.php?id=34029
 https://animenewsnetwork.com/encyclopedia/anime.php?id=34035
 https://animenewsnetwork.com/encyclopedia/anime.php?id=34056
@@ -2301,11 +2368,15 @@ https://animenewsnetwork.com/encyclopedia/anime.php?id=34200
 https://animenewsnetwork.com/encyclopedia/anime.php?id=34204
 https://animenewsnetwork.com/encyclopedia/anime.php?id=34209
 https://animenewsnetwork.com/encyclopedia/anime.php?id=34215
+https://animenewsnetwork.com/encyclopedia/anime.php?id=34217
+https://animenewsnetwork.com/encyclopedia/anime.php?id=34221
 https://animenewsnetwork.com/encyclopedia/anime.php?id=34222
 https://animenewsnetwork.com/encyclopedia/anime.php?id=34227
 https://animenewsnetwork.com/encyclopedia/anime.php?id=34229
 https://animenewsnetwork.com/encyclopedia/anime.php?id=34231
+https://animenewsnetwork.com/encyclopedia/anime.php?id=34242
 https://animenewsnetwork.com/encyclopedia/anime.php?id=34258
+https://animenewsnetwork.com/encyclopedia/anime.php?id=34264
 https://animenewsnetwork.com/encyclopedia/anime.php?id=34279
 https://animenewsnetwork.com/encyclopedia/anime.php?id=34280
 https://animenewsnetwork.com/encyclopedia/anime.php?id=34281
@@ -2325,6 +2396,7 @@ https://animenewsnetwork.com/encyclopedia/anime.php?id=34592
 https://animenewsnetwork.com/encyclopedia/anime.php?id=3464
 https://animenewsnetwork.com/encyclopedia/anime.php?id=34665
 https://animenewsnetwork.com/encyclopedia/anime.php?id=34685
+https://animenewsnetwork.com/encyclopedia/anime.php?id=34709
 https://animenewsnetwork.com/encyclopedia/anime.php?id=34713
 https://animenewsnetwork.com/encyclopedia/anime.php?id=3475
 https://animenewsnetwork.com/encyclopedia/anime.php?id=3476
@@ -2347,19 +2419,20 @@ https://animenewsnetwork.com/encyclopedia/anime.php?id=35095
 https://animenewsnetwork.com/encyclopedia/anime.php?id=35140
 https://animenewsnetwork.com/encyclopedia/anime.php?id=35142
 https://animenewsnetwork.com/encyclopedia/anime.php?id=35153
+https://animenewsnetwork.com/encyclopedia/anime.php?id=35170
 https://animenewsnetwork.com/encyclopedia/anime.php?id=35180
 https://animenewsnetwork.com/encyclopedia/anime.php?id=35191
 https://animenewsnetwork.com/encyclopedia/anime.php?id=35194
 https://animenewsnetwork.com/encyclopedia/anime.php?id=35250
 https://animenewsnetwork.com/encyclopedia/anime.php?id=35279
 https://animenewsnetwork.com/encyclopedia/anime.php?id=3528
+https://animenewsnetwork.com/encyclopedia/anime.php?id=35281
 https://animenewsnetwork.com/encyclopedia/anime.php?id=35282
 https://animenewsnetwork.com/encyclopedia/anime.php?id=3529
 https://animenewsnetwork.com/encyclopedia/anime.php?id=35290
 https://animenewsnetwork.com/encyclopedia/anime.php?id=35301
 https://animenewsnetwork.com/encyclopedia/anime.php?id=35315
 https://animenewsnetwork.com/encyclopedia/anime.php?id=35329
-https://animenewsnetwork.com/encyclopedia/anime.php?id=35369
 https://animenewsnetwork.com/encyclopedia/anime.php?id=35384
 https://animenewsnetwork.com/encyclopedia/anime.php?id=35393
 https://animenewsnetwork.com/encyclopedia/anime.php?id=35395
@@ -2372,8 +2445,10 @@ https://animenewsnetwork.com/encyclopedia/anime.php?id=3552
 https://animenewsnetwork.com/encyclopedia/anime.php?id=35529
 https://animenewsnetwork.com/encyclopedia/anime.php?id=3553
 https://animenewsnetwork.com/encyclopedia/anime.php?id=35530
+https://animenewsnetwork.com/encyclopedia/anime.php?id=3554
 https://animenewsnetwork.com/encyclopedia/anime.php?id=3557
 https://animenewsnetwork.com/encyclopedia/anime.php?id=356
+https://animenewsnetwork.com/encyclopedia/anime.php?id=3561
 https://animenewsnetwork.com/encyclopedia/anime.php?id=35638
 https://animenewsnetwork.com/encyclopedia/anime.php?id=35667
 https://animenewsnetwork.com/encyclopedia/anime.php?id=3579
@@ -2430,6 +2505,7 @@ https://animenewsnetwork.com/encyclopedia/anime.php?id=37127
 https://animenewsnetwork.com/encyclopedia/anime.php?id=3720
 https://animenewsnetwork.com/encyclopedia/anime.php?id=37269
 https://animenewsnetwork.com/encyclopedia/anime.php?id=37283
+https://animenewsnetwork.com/encyclopedia/anime.php?id=37291
 https://animenewsnetwork.com/encyclopedia/anime.php?id=37371
 https://animenewsnetwork.com/encyclopedia/anime.php?id=37456
 https://animenewsnetwork.com/encyclopedia/anime.php?id=3752
@@ -2448,6 +2524,7 @@ https://animenewsnetwork.com/encyclopedia/anime.php?id=37799
 https://animenewsnetwork.com/encyclopedia/anime.php?id=37825
 https://animenewsnetwork.com/encyclopedia/anime.php?id=37833
 https://animenewsnetwork.com/encyclopedia/anime.php?id=37835
+https://animenewsnetwork.com/encyclopedia/anime.php?id=37851
 https://animenewsnetwork.com/encyclopedia/anime.php?id=37854
 https://animenewsnetwork.com/encyclopedia/anime.php?id=37869
 https://animenewsnetwork.com/encyclopedia/anime.php?id=37876
@@ -2492,6 +2569,7 @@ https://animenewsnetwork.com/encyclopedia/anime.php?id=38200
 https://animenewsnetwork.com/encyclopedia/anime.php?id=38259
 https://animenewsnetwork.com/encyclopedia/anime.php?id=38265
 https://animenewsnetwork.com/encyclopedia/anime.php?id=38276
+https://animenewsnetwork.com/encyclopedia/anime.php?id=38284
 https://animenewsnetwork.com/encyclopedia/anime.php?id=38287
 https://animenewsnetwork.com/encyclopedia/anime.php?id=38293
 https://animenewsnetwork.com/encyclopedia/anime.php?id=3830
@@ -2579,8 +2657,11 @@ https://animenewsnetwork.com/encyclopedia/anime.php?id=39814
 https://animenewsnetwork.com/encyclopedia/anime.php?id=39838
 https://animenewsnetwork.com/encyclopedia/anime.php?id=39892
 https://animenewsnetwork.com/encyclopedia/anime.php?id=39898
+https://animenewsnetwork.com/encyclopedia/anime.php?id=39899
 https://animenewsnetwork.com/encyclopedia/anime.php?id=3991
 https://animenewsnetwork.com/encyclopedia/anime.php?id=39910
+https://animenewsnetwork.com/encyclopedia/anime.php?id=3992
+https://animenewsnetwork.com/encyclopedia/anime.php?id=39929
 https://animenewsnetwork.com/encyclopedia/anime.php?id=39936
 https://animenewsnetwork.com/encyclopedia/anime.php?id=39937
 https://animenewsnetwork.com/encyclopedia/anime.php?id=39939
@@ -2730,6 +2811,7 @@ https://animenewsnetwork.com/encyclopedia/anime.php?id=5478
 https://animenewsnetwork.com/encyclopedia/anime.php?id=5528
 https://animenewsnetwork.com/encyclopedia/anime.php?id=5529
 https://animenewsnetwork.com/encyclopedia/anime.php?id=5550
+https://animenewsnetwork.com/encyclopedia/anime.php?id=5561
 https://animenewsnetwork.com/encyclopedia/anime.php?id=5591
 https://animenewsnetwork.com/encyclopedia/anime.php?id=5639
 https://animenewsnetwork.com/encyclopedia/anime.php?id=5654
@@ -2759,6 +2841,7 @@ https://animenewsnetwork.com/encyclopedia/anime.php?id=5894
 https://animenewsnetwork.com/encyclopedia/anime.php?id=590
 https://animenewsnetwork.com/encyclopedia/anime.php?id=591
 https://animenewsnetwork.com/encyclopedia/anime.php?id=593
+https://animenewsnetwork.com/encyclopedia/anime.php?id=5965
 https://animenewsnetwork.com/encyclopedia/anime.php?id=5989
 https://animenewsnetwork.com/encyclopedia/anime.php?id=60
 https://animenewsnetwork.com/encyclopedia/anime.php?id=604
@@ -2801,10 +2884,12 @@ https://animenewsnetwork.com/encyclopedia/anime.php?id=6419
 https://animenewsnetwork.com/encyclopedia/anime.php?id=6428
 https://animenewsnetwork.com/encyclopedia/anime.php?id=6436
 https://animenewsnetwork.com/encyclopedia/anime.php?id=6465
+https://animenewsnetwork.com/encyclopedia/anime.php?id=6473
 https://animenewsnetwork.com/encyclopedia/anime.php?id=6488
 https://animenewsnetwork.com/encyclopedia/anime.php?id=6516
 https://animenewsnetwork.com/encyclopedia/anime.php?id=6517
 https://animenewsnetwork.com/encyclopedia/anime.php?id=655
+https://animenewsnetwork.com/encyclopedia/anime.php?id=6551
 https://animenewsnetwork.com/encyclopedia/anime.php?id=6554
 https://animenewsnetwork.com/encyclopedia/anime.php?id=6558
 https://animenewsnetwork.com/encyclopedia/anime.php?id=6571
@@ -2949,6 +3034,7 @@ https://animenewsnetwork.com/encyclopedia/anime.php?id=8229
 https://animenewsnetwork.com/encyclopedia/anime.php?id=8244
 https://animenewsnetwork.com/encyclopedia/anime.php?id=8275
 https://animenewsnetwork.com/encyclopedia/anime.php?id=8281
+https://animenewsnetwork.com/encyclopedia/anime.php?id=830
 https://animenewsnetwork.com/encyclopedia/anime.php?id=8336
 https://animenewsnetwork.com/encyclopedia/anime.php?id=836
 https://animenewsnetwork.com/encyclopedia/anime.php?id=8370
@@ -2978,6 +3064,7 @@ https://animenewsnetwork.com/encyclopedia/anime.php?id=9013
 https://animenewsnetwork.com/encyclopedia/anime.php?id=902
 https://animenewsnetwork.com/encyclopedia/anime.php?id=9032
 https://animenewsnetwork.com/encyclopedia/anime.php?id=9034
+https://animenewsnetwork.com/encyclopedia/anime.php?id=9036
 https://animenewsnetwork.com/encyclopedia/anime.php?id=905
 https://animenewsnetwork.com/encyclopedia/anime.php?id=9077
 https://animenewsnetwork.com/encyclopedia/anime.php?id=909
@@ -4122,6 +4209,7 @@ https://anisearch.com/anime/20927
 https://anisearch.com/anime/20930
 https://anisearch.com/anime/20933
 https://anisearch.com/anime/20934
+https://anisearch.com/anime/20935
 https://anisearch.com/anime/20936
 https://anisearch.com/anime/20937
 https://anisearch.com/anime/20942
@@ -4344,6 +4432,7 @@ https://anisearch.com/anime/21598
 https://anisearch.com/anime/21601
 https://anisearch.com/anime/21604
 https://anisearch.com/anime/21612
+https://anisearch.com/anime/21617
 https://anisearch.com/anime/21622
 https://anisearch.com/anime/21627
 https://anisearch.com/anime/21629
@@ -4358,6 +4447,7 @@ https://anisearch.com/anime/21659
 https://anisearch.com/anime/21662
 https://anisearch.com/anime/21664
 https://anisearch.com/anime/21667
+https://anisearch.com/anime/21670
 https://anisearch.com/anime/21684
 https://anisearch.com/anime/21685
 https://anisearch.com/anime/21686
@@ -4668,6 +4758,7 @@ https://kitsu.app/anime/13506
 https://kitsu.app/anime/13507
 https://kitsu.app/anime/13519
 https://kitsu.app/anime/13520
+https://kitsu.app/anime/13527
 https://kitsu.app/anime/13533
 https://kitsu.app/anime/13546
 https://kitsu.app/anime/13547
@@ -4879,7 +4970,6 @@ https://kitsu.app/anime/42418
 https://kitsu.app/anime/42425
 https://kitsu.app/anime/42461
 https://kitsu.app/anime/42492
-https://kitsu.app/anime/42517
 https://kitsu.app/anime/42529
 https://kitsu.app/anime/42542
 https://kitsu.app/anime/42545
@@ -4937,6 +5027,7 @@ https://kitsu.app/anime/43540
 https://kitsu.app/anime/43541
 https://kitsu.app/anime/43562
 https://kitsu.app/anime/43571
+https://kitsu.app/anime/43591
 https://kitsu.app/anime/43609
 https://kitsu.app/anime/43618
 https://kitsu.app/anime/43623
@@ -5141,6 +5232,7 @@ https://kitsu.app/anime/44610
 https://kitsu.app/anime/44612
 https://kitsu.app/anime/44615
 https://kitsu.app/anime/44621
+https://kitsu.app/anime/44656
 https://kitsu.app/anime/44701
 https://kitsu.app/anime/44704
 https://kitsu.app/anime/44756
@@ -5367,7 +5459,6 @@ https://kitsu.app/anime/47713
 https://kitsu.app/anime/47765
 https://kitsu.app/anime/47774
 https://kitsu.app/anime/47787
-https://kitsu.app/anime/47789
 https://kitsu.app/anime/47792
 https://kitsu.app/anime/47802
 https://kitsu.app/anime/47803
@@ -5501,6 +5592,7 @@ https://kitsu.app/anime/49973
 https://kitsu.app/anime/49979
 https://kitsu.app/anime/49993
 https://kitsu.app/anime/50014
+https://kitsu.app/anime/50019
 https://kitsu.app/anime/50026
 https://kitsu.app/anime/50051
 https://kitsu.app/anime/50053
@@ -5513,6 +5605,7 @@ https://kitsu.app/anime/50086
 https://kitsu.app/anime/50087
 https://kitsu.app/anime/50088
 https://kitsu.app/anime/50090
+https://kitsu.app/anime/50110
 https://kitsu.app/anime/50125
 https://kitsu.app/anime/50141
 https://kitsu.app/anime/50143
@@ -5528,12 +5621,14 @@ https://kitsu.app/anime/50263
 https://kitsu.app/anime/50264
 https://kitsu.app/anime/50281
 https://kitsu.app/anime/50289
+https://kitsu.app/anime/50293
 https://kitsu.app/anime/50319
 https://kitsu.app/anime/50327
 https://kitsu.app/anime/50329
 https://kitsu.app/anime/50333
 https://kitsu.app/anime/50339
 https://kitsu.app/anime/50359
+https://kitsu.app/anime/50381
 https://kitsu.app/anime/50383
 https://kitsu.app/anime/50395
 https://kitsu.app/anime/50410
@@ -5551,18 +5646,23 @@ https://kitsu.app/anime/50476
 https://kitsu.app/anime/50477
 https://kitsu.app/anime/50484
 https://kitsu.app/anime/50495
+https://kitsu.app/anime/50501
 https://kitsu.app/anime/50504
 https://kitsu.app/anime/50505
+https://kitsu.app/anime/50508
+https://kitsu.app/anime/50509
 https://kitsu.app/anime/50535
 https://kitsu.app/anime/50536
 https://kitsu.app/anime/50538
 https://kitsu.app/anime/50549
 https://kitsu.app/anime/50554
+https://kitsu.app/anime/50557
 https://kitsu.app/anime/50561
 https://kitsu.app/anime/50567
 https://kitsu.app/anime/50598
 https://kitsu.app/anime/50618
 https://kitsu.app/anime/50626
+https://kitsu.app/anime/50639
 https://kitsu.app/anime/50640
 https://kitsu.app/anime/50641
 https://kitsu.app/anime/50666
@@ -5579,6 +5679,7 @@ https://kitsu.app/anime/50744
 https://kitsu.app/anime/50747
 https://kitsu.app/anime/50748
 https://kitsu.app/anime/50758
+https://kitsu.app/anime/50764
 https://kitsu.app/anime/50795
 https://kitsu.app/anime/50809
 https://kitsu.app/anime/50810
@@ -5674,10 +5775,12 @@ https://livechart.me/anime/12871
 https://livechart.me/anime/12914
 https://livechart.me/anime/12977
 https://livechart.me/anime/13027
+https://livechart.me/anime/13075
 https://livechart.me/anime/13131
 https://livechart.me/anime/13181
 https://livechart.me/anime/13194
 https://livechart.me/anime/13195
+https://livechart.me/anime/13196
 https://livechart.me/anime/13197
 https://livechart.me/anime/13203
 https://livechart.me/anime/13204
@@ -5697,6 +5800,7 @@ https://livechart.me/anime/13345
 https://livechart.me/anime/13352
 https://livechart.me/anime/13357
 https://livechart.me/anime/13370
+https://livechart.me/anime/13383
 https://livechart.me/anime/13386
 https://livechart.me/anime/13408
 https://livechart.me/anime/13413
@@ -5766,6 +5870,7 @@ https://livechart.me/anime/277
 https://livechart.me/anime/3020
 https://livechart.me/anime/37
 https://livechart.me/anime/400
+https://livechart.me/anime/447
 https://livechart.me/anime/550
 https://livechart.me/anime/551
 https://livechart.me/anime/558
@@ -5783,14 +5888,17 @@ https://livechart.me/anime/9568
 https://livechart.me/anime/9631
 https://livechart.me/anime/9724
 https://livechart.me/anime/9861
+https://myanimelist.net/anime/10104
 https://myanimelist.net/anime/10256
 https://myanimelist.net/anime/10409
 https://myanimelist.net/anime/11511
 https://myanimelist.net/anime/15527
 https://myanimelist.net/anime/20261
+https://myanimelist.net/anime/23033
 https://myanimelist.net/anime/24987
 https://myanimelist.net/anime/30770
 https://myanimelist.net/anime/30924
+https://myanimelist.net/anime/32740
 https://myanimelist.net/anime/33750
 https://myanimelist.net/anime/34790
 https://myanimelist.net/anime/35091
@@ -5800,15 +5908,18 @@ https://myanimelist.net/anime/35308
 https://myanimelist.net/anime/35309
 https://myanimelist.net/anime/35311
 https://myanimelist.net/anime/35312
+https://myanimelist.net/anime/35920
 https://myanimelist.net/anime/36015
 https://myanimelist.net/anime/36111
 https://myanimelist.net/anime/3644
 https://myanimelist.net/anime/36700
 https://myanimelist.net/anime/36714
 https://myanimelist.net/anime/37358
+https://myanimelist.net/anime/37460
 https://myanimelist.net/anime/37640
 https://myanimelist.net/anime/38387
 https://myanimelist.net/anime/38420
+https://myanimelist.net/anime/38507
 https://myanimelist.net/anime/38552
 https://myanimelist.net/anime/38624
 https://myanimelist.net/anime/38776
@@ -5822,6 +5933,7 @@ https://myanimelist.net/anime/39102
 https://myanimelist.net/anime/39162
 https://myanimelist.net/anime/39201
 https://myanimelist.net/anime/39217
+https://myanimelist.net/anime/39243
 https://myanimelist.net/anime/39251
 https://myanimelist.net/anime/39328
 https://myanimelist.net/anime/39381
@@ -5832,6 +5944,7 @@ https://myanimelist.net/anime/39731
 https://myanimelist.net/anime/39766
 https://myanimelist.net/anime/39810
 https://myanimelist.net/anime/40152
+https://myanimelist.net/anime/40153
 https://myanimelist.net/anime/40244
 https://myanimelist.net/anime/40273
 https://myanimelist.net/anime/40288
@@ -5850,6 +5963,7 @@ https://myanimelist.net/anime/41159
 https://myanimelist.net/anime/41182
 https://myanimelist.net/anime/41245
 https://myanimelist.net/anime/41253
+https://myanimelist.net/anime/41498
 https://myanimelist.net/anime/41786
 https://myanimelist.net/anime/42153
 https://myanimelist.net/anime/42726
@@ -7013,6 +7127,7 @@ https://myanimelist.net/anime/47855
 https://myanimelist.net/anime/47856
 https://myanimelist.net/anime/47858
 https://myanimelist.net/anime/47859
+https://myanimelist.net/anime/47860
 https://myanimelist.net/anime/47863
 https://myanimelist.net/anime/47864
 https://myanimelist.net/anime/47865
@@ -7143,6 +7258,7 @@ https://myanimelist.net/anime/49036
 https://myanimelist.net/anime/49439
 https://myanimelist.net/anime/4946
 https://myanimelist.net/anime/49483
+https://myanimelist.net/anime/49771
 https://myanimelist.net/anime/49876
 https://myanimelist.net/anime/49922
 https://myanimelist.net/anime/50320
@@ -7156,6 +7272,7 @@ https://myanimelist.net/anime/51348
 https://myanimelist.net/anime/51410
 https://myanimelist.net/anime/51565
 https://myanimelist.net/anime/51658
+https://myanimelist.net/anime/51684
 https://myanimelist.net/anime/51695
 https://myanimelist.net/anime/51763
 https://myanimelist.net/anime/51825
@@ -7340,6 +7457,7 @@ https://myanimelist.net/anime/54888
 https://myanimelist.net/anime/54889
 https://myanimelist.net/anime/54922
 https://myanimelist.net/anime/54944
+https://myanimelist.net/anime/54987
 https://myanimelist.net/anime/55019
 https://myanimelist.net/anime/55025
 https://myanimelist.net/anime/55026
@@ -7362,6 +7480,7 @@ https://myanimelist.net/anime/55142
 https://myanimelist.net/anime/55154
 https://myanimelist.net/anime/55155
 https://myanimelist.net/anime/55158
+https://myanimelist.net/anime/55159
 https://myanimelist.net/anime/55160
 https://myanimelist.net/anime/55167
 https://myanimelist.net/anime/55169
@@ -7378,6 +7497,7 @@ https://myanimelist.net/anime/55198
 https://myanimelist.net/anime/55200
 https://myanimelist.net/anime/55202
 https://myanimelist.net/anime/55203
+https://myanimelist.net/anime/55215
 https://myanimelist.net/anime/55229
 https://myanimelist.net/anime/55253
 https://myanimelist.net/anime/55257
@@ -7396,6 +7516,7 @@ https://myanimelist.net/anime/55513
 https://myanimelist.net/anime/55527
 https://myanimelist.net/anime/55541
 https://myanimelist.net/anime/55546
+https://myanimelist.net/anime/55588
 https://myanimelist.net/anime/55606
 https://myanimelist.net/anime/55608
 https://myanimelist.net/anime/55609
@@ -7714,6 +7835,7 @@ https://myanimelist.net/anime/57481
 https://myanimelist.net/anime/57482
 https://myanimelist.net/anime/57494
 https://myanimelist.net/anime/57503
+https://myanimelist.net/anime/57545
 https://myanimelist.net/anime/57561
 https://myanimelist.net/anime/57578
 https://myanimelist.net/anime/57598
@@ -7787,11 +7909,13 @@ https://myanimelist.net/anime/58334
 https://myanimelist.net/anime/58336
 https://myanimelist.net/anime/58338
 https://myanimelist.net/anime/58339
+https://myanimelist.net/anime/58343
 https://myanimelist.net/anime/58356
 https://myanimelist.net/anime/58369
 https://myanimelist.net/anime/58372
 https://myanimelist.net/anime/58373
 https://myanimelist.net/anime/58379
+https://myanimelist.net/anime/58410
 https://myanimelist.net/anime/58416
 https://myanimelist.net/anime/58418
 https://myanimelist.net/anime/58431
@@ -8032,6 +8156,7 @@ https://myanimelist.net/anime/60007
 https://myanimelist.net/anime/60011
 https://myanimelist.net/anime/60013
 https://myanimelist.net/anime/60017
+https://myanimelist.net/anime/60027
 https://myanimelist.net/anime/60031
 https://myanimelist.net/anime/60035
 https://myanimelist.net/anime/60036
@@ -8066,6 +8191,7 @@ https://myanimelist.net/anime/60194
 https://myanimelist.net/anime/60196
 https://myanimelist.net/anime/60197
 https://myanimelist.net/anime/60219
+https://myanimelist.net/anime/60220
 https://myanimelist.net/anime/60222
 https://myanimelist.net/anime/60229
 https://myanimelist.net/anime/60231
@@ -8114,6 +8240,7 @@ https://myanimelist.net/anime/60517
 https://myanimelist.net/anime/60527
 https://myanimelist.net/anime/60530
 https://myanimelist.net/anime/60538
+https://myanimelist.net/anime/60547
 https://myanimelist.net/anime/60556
 https://myanimelist.net/anime/60573
 https://myanimelist.net/anime/60576
@@ -8252,6 +8379,7 @@ https://myanimelist.net/anime/61079
 https://myanimelist.net/anime/61083
 https://myanimelist.net/anime/61086
 https://myanimelist.net/anime/61099
+https://myanimelist.net/anime/61110
 https://myanimelist.net/anime/61117
 https://myanimelist.net/anime/61124
 https://myanimelist.net/anime/61141
@@ -8276,6 +8404,7 @@ https://myanimelist.net/anime/61347
 https://myanimelist.net/anime/61352
 https://myanimelist.net/anime/61354
 https://myanimelist.net/anime/61366
+https://myanimelist.net/anime/61367
 https://myanimelist.net/anime/61408
 https://myanimelist.net/anime/61416
 https://myanimelist.net/anime/61419
@@ -8401,6 +8530,7 @@ https://myanimelist.net/anime/62025
 https://myanimelist.net/anime/62028
 https://myanimelist.net/anime/62029
 https://myanimelist.net/anime/62030
+https://myanimelist.net/anime/62036
 https://myanimelist.net/anime/62045
 https://myanimelist.net/anime/62052
 https://myanimelist.net/anime/62053
@@ -8461,6 +8591,8 @@ https://myanimelist.net/anime/62267
 https://myanimelist.net/anime/62272
 https://myanimelist.net/anime/62274
 https://myanimelist.net/anime/62275
+https://myanimelist.net/anime/62295
+https://myanimelist.net/anime/62296
 https://myanimelist.net/anime/62298
 https://myanimelist.net/anime/62305
 https://myanimelist.net/anime/62306
@@ -8469,16 +8601,21 @@ https://myanimelist.net/anime/62308
 https://myanimelist.net/anime/62309
 https://myanimelist.net/anime/62310
 https://myanimelist.net/anime/62318
+https://myanimelist.net/anime/62319
 https://myanimelist.net/anime/62321
 https://myanimelist.net/anime/62323
 https://myanimelist.net/anime/62326
 https://myanimelist.net/anime/62328
 https://myanimelist.net/anime/62339
+https://myanimelist.net/anime/62346
 https://myanimelist.net/anime/62347
 https://myanimelist.net/anime/62348
 https://myanimelist.net/anime/62349
+https://myanimelist.net/anime/62350
 https://myanimelist.net/anime/62351
 https://myanimelist.net/anime/62354
+https://myanimelist.net/anime/62357
+https://myanimelist.net/anime/62361
 https://myanimelist.net/anime/62365
 https://myanimelist.net/anime/62372
 https://myanimelist.net/anime/62373
@@ -8502,6 +8639,8 @@ https://myanimelist.net/anime/62416
 https://myanimelist.net/anime/62418
 https://myanimelist.net/anime/62424
 https://myanimelist.net/anime/62427
+https://myanimelist.net/anime/62429
+https://myanimelist.net/anime/62441
 https://myanimelist.net/anime/62446
 https://myanimelist.net/anime/62447
 https://myanimelist.net/anime/62449
@@ -8518,8 +8657,11 @@ https://myanimelist.net/anime/62459
 https://myanimelist.net/anime/62460
 https://myanimelist.net/anime/62461
 https://myanimelist.net/anime/62464
+https://myanimelist.net/anime/62465
 https://myanimelist.net/anime/62467
 https://myanimelist.net/anime/62468
+https://myanimelist.net/anime/62495
+https://myanimelist.net/anime/62497
 https://myanimelist.net/anime/62506
 https://myanimelist.net/anime/62507
 https://myanimelist.net/anime/62509
@@ -8578,6 +8720,7 @@ https://myanimelist.net/anime/62740
 https://myanimelist.net/anime/62742
 https://myanimelist.net/anime/62743
 https://myanimelist.net/anime/62746
+https://myanimelist.net/anime/62748
 https://myanimelist.net/anime/62749
 https://myanimelist.net/anime/62752
 https://myanimelist.net/anime/62754
@@ -8635,6 +8778,8 @@ https://myanimelist.net/anime/62890
 https://myanimelist.net/anime/62894
 https://myanimelist.net/anime/62895
 https://myanimelist.net/anime/62900
+https://myanimelist.net/anime/62901
+https://myanimelist.net/anime/62902
 https://myanimelist.net/anime/62906
 https://myanimelist.net/anime/62909
 https://myanimelist.net/anime/62910
@@ -8746,6 +8891,7 @@ https://myanimelist.net/anime/63295
 https://myanimelist.net/anime/63296
 https://myanimelist.net/anime/63298
 https://myanimelist.net/anime/63312
+https://myanimelist.net/anime/63313
 https://myanimelist.net/anime/63315
 https://myanimelist.net/anime/63318
 https://myanimelist.net/anime/63321
@@ -8762,9 +8908,11 @@ https://myanimelist.net/anime/63344
 https://myanimelist.net/anime/63346
 https://myanimelist.net/anime/63348
 https://myanimelist.net/anime/63355
+https://myanimelist.net/anime/63357
 https://myanimelist.net/anime/63358
 https://myanimelist.net/anime/63361
 https://myanimelist.net/anime/63363
+https://myanimelist.net/anime/63368
 https://myanimelist.net/anime/63373
 https://myanimelist.net/anime/63377
 https://myanimelist.net/anime/63393
@@ -8772,6 +8920,7 @@ https://myanimelist.net/anime/63394
 https://myanimelist.net/anime/63408
 https://myanimelist.net/anime/63410
 https://myanimelist.net/anime/63420
+https://myanimelist.net/anime/63421
 https://myanimelist.net/anime/63425
 https://myanimelist.net/anime/63426
 https://myanimelist.net/anime/63429
@@ -8804,6 +8953,7 @@ https://myanimelist.net/anime/63496
 https://myanimelist.net/anime/63498
 https://myanimelist.net/anime/63499
 https://myanimelist.net/anime/63501
+https://myanimelist.net/anime/63505
 https://myanimelist.net/anime/63507
 https://myanimelist.net/anime/63510
 https://myanimelist.net/anime/63522
@@ -8839,6 +8989,7 @@ https://myanimelist.net/anime/63602
 https://myanimelist.net/anime/63604
 https://myanimelist.net/anime/63605
 https://myanimelist.net/anime/63607
+https://myanimelist.net/anime/63609
 https://myanimelist.net/anime/63611
 https://myanimelist.net/anime/63619
 https://myanimelist.net/anime/63626
@@ -8914,6 +9065,9 @@ https://myanimelist.net/anime/63826
 https://myanimelist.net/anime/63828
 https://myanimelist.net/anime/63830
 https://myanimelist.net/anime/63834
+https://myanimelist.net/anime/63835
+https://myanimelist.net/anime/63836
+https://myanimelist.net/anime/63838
 https://myanimelist.net/anime/63840
 https://myanimelist.net/anime/63841
 https://myanimelist.net/anime/63845
@@ -9046,6 +9200,7 @@ https://myanimelist.net/anime/64169
 https://myanimelist.net/anime/64170
 https://myanimelist.net/anime/64172
 https://myanimelist.net/anime/64173
+https://myanimelist.net/anime/64175
 https://myanimelist.net/anime/64177
 https://myanimelist.net/anime/64179
 https://myanimelist.net/anime/64183
@@ -9060,9 +9215,11 @@ https://myanimelist.net/anime/64194
 https://myanimelist.net/anime/64195
 https://myanimelist.net/anime/64196
 https://myanimelist.net/anime/64197
+https://myanimelist.net/anime/64200
 https://myanimelist.net/anime/64201
 https://myanimelist.net/anime/64202
 https://myanimelist.net/anime/64209
+https://myanimelist.net/anime/64216
 https://myanimelist.net/anime/64219
 https://myanimelist.net/anime/64220
 https://myanimelist.net/anime/64221
