@@ -4,7 +4,7 @@
 #
 # Run it inside tmux so the JVM survives an SSH disconnect:
 #   tmux new -s crawl
-#   ./scripts/run.sh
+#   ./scripts/run-app.sh
 #
 # You'll be prompted for your sudo password once at startup (used for the
 # `ip -6 addr` rotation). Stop the crawl with a SINGLE Ctrl+C and wait for the
@@ -17,7 +17,7 @@
 #
 # Layout: the modb-app.jar and config.toml live in a run directory, which
 # defaults to "$HOME/modb-run" and can be overridden:
-#   MODB_RUN_DIR=/path/to/run-dir ./scripts/run.sh
+#   MODB_RUN_DIR=/path/to/run-dir ./scripts/run-app.sh
 #
 # The Discord webhook URL is read from the MODB_DISCORD_WEBHOOK environment
 # variable, or from a "discord-webhook.txt" file inside the run directory. If

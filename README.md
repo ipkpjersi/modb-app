@@ -84,7 +84,7 @@ Run
 
 ### Optional: crash alerts (Discord webhook)
 
-`scripts/run.sh` launches the app and, on a hard crash (the JVM exiting non-zero when it was not a
+`scripts/run-app.sh` launches the app and, on a hard crash (the JVM exiting non-zero when it was not a
 manual Ctrl+C), posts the tail of the run output to a Discord webhook. The webhook URL is read from
 the `MODB_DISCORD_WEBHOOK` environment variable, or from a `discord-webhook.txt` file in the run
 directory (alongside `modb-app.jar` and `config.toml`). Put just the raw URL on a single line, with
