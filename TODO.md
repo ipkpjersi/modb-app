@@ -45,18 +45,22 @@ the residential IP - verified against the live services rather than assumed:
 Cloudflare naming the IP ban outright, and anime-planet/simkl not even being challenged from a residential
 IP, confirms the block was purely IP-based exactly as diagnosed.
 
-**But the ban was hiding a separate blocker behind each provider**, none of them knowable until it lifted, so
-only two of the four actually crawl today:
+**But the ban was hiding a separate blocker behind each provider**, none of them knowable until it lifted, and
+a residential exit turned out not to be permanent either, so only one of the four still crawls today:
 
 | Provider | Now | Why |
 | --- | --- | --- |
-| anisearch.com | **crawling** | was purely IP-banned; nothing else wrong |
 | anime-planet.com | **crawling** | its HTML had drifted to a table layout while the parser expected cards; fixed by accepting both |
+| anisearch.com | **blocked** | crawled for a day, then anisearch banned the residential IP too - item 6 |
 | simkl.com | **deactivated** | pagination POST refused even from residential - item 4 |
 | anidb.net | **deactivated** | ~100-200 requests per IP per *day*; needs rotating residential proxies - item 5 |
 
-So `deactivatedMetaDataProviders` holds `anidb.net` and `simkl.com`, and the merge-lock re-run below will
-still leave their cross-provider splits split.
+So `deactivatedMetaDataProviders` holds `anidb.net` and `simkl.com` - anisearch still needs adding, see item 6
+- and the merge-lock re-run below will still leave their cross-provider splits split.
+
+**The residential IP is a consumable, not a fix.** Two of the four have now burned it (anidb within ~50-80
+requests, anisearch within a day), which the table above records provider by provider. The tunnel buys an
+exit that is not pre-banned; it does not buy permission to crawl at datacenter speed from it.
 
 **How it works.**
 - **App side.** `TunnelConfig` (`modb.app.tunnel.*`) selects which provider(s) route through the SOCKS5
@@ -337,7 +341,10 @@ calls, against the very quota that is the constraint. So the API trades the one 
 lack.
 
 **Decision (2026-07-17): anidb is deactivated in `config.toml` until it has auto-rotating residential
-proxies.**
+proxies. Slowing down cannot rescue this one** - the contrast with anisearch (item 6) is the whole point.
+anisearch's ban looks volume-triggered, so a long enough delay may genuinely fit under it; anidb's limit is a
+*daily quota per IP*, and a delay cannot buy throughput that the quota does not contain. Do not spend time
+tuning a delay here.
 
 That conclusion follows directly from the constraint. The quota is **per IP**, so the only thing that raises
 throughput is *more IPs* - not a longer delay, not the API, not a smarter crawler. One residential IP buys
@@ -397,14 +404,71 @@ changes nothing about what the provider sees. Observed in the crash log:
 So the recovery is useless (same exit IP), harmful (`SuspendableHttpClient` blocks all providers while the
 interface bounces), and guaranteed to fail (it retries into the very ban it is reacting to). The same applies
 to anisearch's `ConnectException`/`UnknownHostException`/`NoRouteToHostException` retry cases, where a
-connection failure now most likely means the tunnel died - which a network restart cannot fix, and actively
-delays, since it drops the SSH connection and forces autossh to reconnect.
+connection failure now means either the tunnel died or anisearch refused the exit IP (item 6, and as of
+2026-07-17 it is the second one). A network restart fixes neither, and actively delays recovery, since it
+drops the SSH connection and forces autossh to reconnect.
+
+Note the ban does not even surface as those exceptions while tunneled: a refused connection arrives as
+`SocketException: SOCKS: Connection refused` (dante relaying SOCKS reply 5), so the retry cases above do not
+match it and the network restart never fires for anisearch today. That is the right outcome by accident, not
+by design - the same fix applies.
 
 `TunnelConfig.isTunneled(hostname)` already provides the predicate. For a tunneled provider the honest
 responses are to back off, or to fail fast with a message naming the real cause, rather than to cycle an
 interface that is not in the path.
 
-## 6. Make the suite fail when a provider's live HTML changes, not just when a fixture does
+## 6. anisearch: the residential IP is banned too - the one ban that may really be a delay problem
+
+**anisearch TCP-refuses the home IP as of 2026-07-17, and it is the current fail-fast blocker:** every request
+burns its five retries and then aborts the whole run, so no other provider finishes until anisearch is added to
+`deactivatedMetaDataProviders`. Confirmed from the home connection itself - the site serves a browser there
+normally, so this is a ban on the exit the tunnel uses, not an outage.
+
+**How it presents.** There is no challenge and no 403, just a SOCKS error, which is why it does not look like a
+ban at first:
+
+    WARN DefaultHttpClient - [GET https://anisearch.com/anime/1176] failed with
+    [SocketException: SOCKS: Connection refused] - retrying (attempt 2 of 5).
+
+That is dante relaying SOCKS reply 5: its own `connect()` on the home machine got ECONNREFUSED. The tunnel is
+healthy and the refusal is anisearch's alone:
+
+| through the tunnel, to | result |
+| --- | --- |
+| `1.1.1.1:443` | SOCKS5 request granted |
+| `168.119.4.235:443` (anisearch) | reply 5, connection refused |
+
+TCP-refused is anisearch's ban signature - the same one item 2's table records for the datacenter IP ("TCP
+refused (curl exit 7)"). The tunnel did not stop working; the ban followed it to the home IP.
+
+**Why this one may be salvageable, unlike anidb.** anidb enforces a documented ~100-200 requests per IP per
+*day* that no delay can fit (item 5). anisearch publishes no such quota, its ban looks volume- or
+rate-triggered, and TCP rejects of this kind are usually temporary. So here a delay that is actually slow
+enough may be a real fix rather than a rounding error.
+
+**The rate that burned it.** `AnisearchCrawler` waits `random(4000, 7000)` ms (~5.5s average) and each entry
+costs at least two requests, `/anime/<id>` and `/anime/<id>/relations` - order of ~1,300 requests/hour. That was
+pointed at the 18,828-entry catch-up described under item 2, where every entry came due in one burst, and the
+IP was refused well inside the first day. **The actual threshold is not measured** - that is the open question,
+and it is the number the delay should be derived from.
+
+**Next steps, cheapest first.**
+1. Add `anisearch.com` to `deactivatedMetaDataProviders` so the rest of the crawl can finish. No rebuild needed.
+2. Wait the ban out, re-probing with a single `curl -sv https://anisearch.com/` from the server. If it lapses on
+   its own it is a temporary rate ban and the rest of this is worth doing; if it never lapses, treat anisearch
+   like anidb and leave it off.
+3. Shrink the catch-up *before* re-enabling, so the first run back is not 18.8k entries at once:
+
+       scripts/reschedule-dcs.py --hostname anisearch.com --spread 1-6 --apply
+
+4. Raise the delay, then re-enable. Nothing in the codebase expresses an intended request rate for anisearch -
+   the same gap item 5 diagnosed for anidb, where a speedup silently deleted an accidental rate limiter that no
+   test or comment had ever named. Whatever number is chosen, write the reasoning down next to it.
+
+**Do not measure the threshold by hammering the flagged IP.** It is the home connection, and probing a live ban
+risks extending it. Same warning as item 5.
+
+## 7. Make the suite fail when a provider's live HTML changes, not just when a fixture does
 
 **The gap that let two crawl-stopping bugs reach production on 2026-07-17.** Every provider's tests run on
 every build - they are *not* gated on `deactivatedMetaDataProviders` (`TestAppConfig` throws
