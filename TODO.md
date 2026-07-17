@@ -271,6 +271,15 @@ design. Options, roughly in order of promise:
 - failing both, drive simkl's pagination outside FlareSolverr - a direct `tunnelAwareHttpClient` POST through
   the tunnel, which is unchallenged only if simkl does not gate that endpoint on JS.
 
+**Possible ban-free path: simkl has a public API (`api.simkl.com`).** Unlike the anisearch case (item 6),
+simkl's is a well-known general catalog/metadata API, not just a personal-list one, so it may cover exactly
+what the pagination POST is scraping - the full anime ID list - without touching the Cloudflare-gated AJAX
+endpoint at all. **Investigate whether it can enumerate every anime ID** (the thing `/ajax/full/anime.php`
+provides today); if it can, it likely sidesteps this whole item. Watch for the same constraints noted in
+item 6: an API key / OAuth, published rate limits to design the delay around from the start, and a meaningful
+User-Agent. Cheapest first test once on a fresh IP: `curl` with a proper UA against the API host to see what a
+catalog/ID-list endpoint returns unauthenticated, before wiring in a key.
+
 ## 5. anidb: AntiLeech triggered - the session speedup removed the accidental rate limiter
 
 **anidb flagged the residential IP on 2026-07-17 and the run aborted. Keep `--skip anidb` until this is
@@ -467,6 +476,19 @@ and it is the number the delay should be derived from.
 
 **Do not measure the threshold by hammering the flagged IP.** It is the home connection, and probing a live ban
 risks extending it. Same warning as item 5.
+
+**Possible ban-free path: anisearch has an OAuth API (`api.anisearch.com`).** A ratings API is documented
+(`GET/PUT/DELETE /v1/my/{anime|manga}/{id}/ratings`, Bearer token, scopes `ratings.anime`/`ratings.manga`,
+10 req/min). That specific endpoint is the authenticated user's own watchlist, not catalog metadata, so it does
+NOT feed the crawl - but it proves a sanctioned API surface exists. **Investigate whether a public metadata /
+catalog endpoint exists alongside it.** If so it likely sidesteps the ban entirely: an authenticated API with
+published limits has no reason to TCP-refuse us the way the scraper's IP is refused, and we would design the
+delay to its stated limit from the start rather than rediscovering it by getting banned. Two constraints the
+ratings doc already states and any endpoint here probably shares: a low published rate (10/min there is
+~600/hour, ~31h for 18.8k entries), and a **mandatory meaningful User-Agent** - a generic UA is 403'd and can
+get the IP denied, so even an unauthenticated probe must send `App/1.0 (contact)` or it risks burning the
+fresh IP the same way. Cheapest first test once on a new IP: `curl` with a proper UA against the API host to
+see what is reachable unauthenticated, before touching OAuth.
 
 ## 7. Make the suite fail when a provider's live HTML changes, not just when a fixture does
 
