@@ -27,6 +27,7 @@ import io.github.manamiproject.modb.app.extensions.alertDeletedAnimeByTitle
 import io.github.manamiproject.modb.app.fluentapi.*
 import io.github.manamiproject.modb.app.network.LinuxNetworkController
 import io.github.manamiproject.modb.app.network.checkTunnel
+import io.github.manamiproject.modb.app.network.destroyFlaresolverrSessions
 import io.github.manamiproject.modb.app.network.startFlaresolverr
 import io.github.manamiproject.modb.app.network.stopFlaresolverr
 import io.github.manamiproject.modb.app.postprocessors.*
@@ -40,6 +41,7 @@ import io.github.manamiproject.modb.kitsu.KitsuConfig
 import io.github.manamiproject.modb.livechart.LivechartConfig
 import io.github.manamiproject.modb.myanimelist.MyanimelistConfig
 import io.github.manamiproject.modb.simkl.SimklConfig
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -78,7 +80,19 @@ private suspend fun run(deactivatedProviders: Set<Hostname>) {
 
     val networkController = LinuxNetworkController.instance
     networkController.sudoPasswordValue = passwordPrompt()
-    Runtime.getRuntime().addShutdownHook(Thread { networkController.restore() })
+
+    // Set once the run reaches its end, so the hook below can tell a finished run from a Ctrl+C or a crash.
+    val completedNormally = AtomicBoolean(false)
+
+    Runtime.getRuntime().addShutdownHook(Thread {
+        if (!completedNormally.get()) {
+            // println rather than the logger: logback installs its own shutdown hook, and if it has already
+            // run then log statements from here silently go nowhere. This message has to be seen, because it
+            // is what tells you the IPv6 restore is underway and that killing the process now would skip it.
+            println("\nGracefully shutting down. Restoring the network configuration, do not kill this process.")
+        }
+        networkController.restore()
+    })
     val flaresolverrContainerId = startFlaresolverr()
 
     val rawFileConversionService = DefaultRawFileConversionService.instance
@@ -107,6 +121,9 @@ private suspend fun run(deactivatedProviders: Set<Hostname>) {
     rawFileConversionService.waitForAllRawFilesToBeConverted()
     rawFileConversionService.shutdown()
 
+    // Before stopping the container, since destroying a session is itself a request to it. A crashed run
+    // leaks its sessions instead; they die with the container whenever it is next restarted.
+    destroyFlaresolverrSessions()
     stopFlaresolverr(flaresolverrContainerId)
 
     DefaultDownloadControlStateUpdater.instance.updateAll()
@@ -132,6 +149,10 @@ private suspend fun run(deactivatedProviders: Set<Hostname>) {
         DeleteOldDownloadDirectoriesPostProcessor.instance,
         ReleaseInfoFileCreatorPostProcessor.instance
     ).forEach { it.process() }
+
+    // The shutdown hook still restores the network, it just stays quiet about it now that this was a
+    // completed run rather than an interruption.
+    completedNormally.set(true)
 }
 
 @KoverIgnore

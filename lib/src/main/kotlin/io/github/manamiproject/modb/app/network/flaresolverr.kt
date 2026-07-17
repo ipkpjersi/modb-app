@@ -129,6 +129,19 @@ fun startFlaresolverr(config: FlaresolverrActionConfig.() -> Unit = { }): String
 }
 
 /**
+ * Destroys every FlareSolverr session created during this run.
+ *
+ * Each session holds a browser open inside the container. Since [startFlaresolverr] deliberately reuses an
+ * already-running container - and [stopFlaresolverr] leaves such a container running - nothing else would
+ * ever reclaim them, so they would accumulate across runs.
+ *
+ * Call this before [stopFlaresolverr]: destroying a session is itself a request to the container.
+ *
+ * @since 1.14.0
+ */
+suspend fun destroyFlaresolverrSessions() = FlaresolverrHttpClient.instance.destroySessions()
+
+/**
  * Stops the flaresolverr docker container.
  * @since 1.13.0
  * @param config Configuration.

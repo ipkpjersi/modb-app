@@ -92,7 +92,12 @@ notify_crash() {
     fi
 }
 
-# Track manual interruption so a deliberate Ctrl+C is not reported as a crash.
+# Track manual interruption so a deliberate stop is not reported as a crash.
+#
+# This trap only covers a signal aimed at THIS script (e.g. `kill %1`). It does NOT catch a typed Ctrl+C:
+# script(1) below puts the terminal into raw mode, so the ^C is forwarded as a byte into the inner pty and
+# raises SIGINT there, reaching the JVM only - this shell never sees the signal. That case is recognised
+# from the JVM's exit status instead, see STOPPED_BY_SIGNAL below.
 INTERRUPTED=0
 trap 'INTERRUPTED=1' INT TERM
 
@@ -117,7 +122,16 @@ script -q -e -c "$run_cmd" "$CAPTURE"
 STATUS=$?
 set -e
 
-if [[ "$STATUS" -ne 0 && "$INTERRUPTED" -eq 0 ]]; then
+# A process killed by a signal exits with 128 + signal number. 130 (SIGINT) is the documented single Ctrl+C
+# stop, and 143 (SIGTERM) is an equally deliberate `kill`. Neither is a crash, and neither reaches the trap
+# above when the JVM runs under script(1) - so they have to be recognised here or every manual stop pages you.
+# A hard kill -9 (137) still alerts: it skips the JVM's shutdown hook, so the IPv6 restore did not run.
+STOPPED_BY_SIGNAL=0
+if [[ "$STATUS" -eq 130 || "$STATUS" -eq 143 ]]; then
+    STOPPED_BY_SIGNAL=1
+fi
+
+if [[ "$STATUS" -ne 0 && "$INTERRUPTED" -eq 0 && "$STOPPED_BY_SIGNAL" -eq 0 ]]; then
     notify_crash "$STATUS" "$CAPTURE"
 fi
 

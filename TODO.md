@@ -149,11 +149,34 @@ already provides the predicate.
 
 ## 3. Reuse a FlareSolverr session instead of re-solving the challenge every request
 
-**Biggest remaining win: measured ~180h -> ~40h for the first full crawl.**
+**DONE (2026-07-17). Measured ~180h -> ~40h for the first full crawl.**
 
-`FlaresolverrHttpClient` sends every request as a bare `request.get` / `request.post`. FlareSolverr answers
-each one in a fresh browser context, so anidb's Cloudflare challenge is solved **from scratch on every single
-entry**. Measured through the tunnel on 2026-07-17:
+`FlaresolverrHttpClient` now creates one session per metadata provider on first use (`sessions.create`),
+passes `"session": "<id>"` on every request, and destroys them all at the end of the run via
+`destroyFlaresolverrSessions()` in `App.kt` - called before `stopFlaresolverr`, since destroying a session is
+itself a request to the container, and because `startFlaresolverr` deliberately reuses a running container so
+nothing else would ever reclaim them.
+
+Details worth keeping in mind:
+- **The `proxy` moved to `sessions.create`.** A session keeps the proxy it was created with, so a request
+  carrying only `session` still exits through the tunnel - verified by asking `api.ipify.org` through a
+  session and getting the residential IP back, not the datacenter one. This was the risk: had the session
+  ignored the proxy, every request would have silently used the banned IP.
+- **One session per provider**, because a session is a browser and its Cloudflare clearance cookie is
+  per-domain. Created under a mutex, since several crawlers hit the same provider concurrently (e.g. the
+  anidb crawler and its highest-id detector) and would otherwise each create one and leak all but the last.
+- **A lost session is retried once** with a fresh one. That is a transient fault, not a provider blocking
+  us, so it must not abort a multi-day crawl - unlike a genuine block, which still fails fast.
+- **`sessions` is a companion-object map** (same rationale as `flaresolverrSemaphore`: one provider, one
+  session, however many crawler instances). The test suite runs concurrently, so tests touching it are
+  serialized with `@ResourceLock` - without that they clear each other's sessions.
+- A crashed run leaks its sessions; they die with the container whenever it is next restarted.
+
+Original analysis, kept because it explains the numbers:
+
+`FlaresolverrHttpClient` used to send every request as a bare `request.get` / `request.post`. FlareSolverr
+answers each one in a fresh browser context, so anidb's Cloudflare challenge was solved **from scratch on
+every single entry**. Measured through the tunnel on 2026-07-17:
 
 | | 1st request | 2nd | 3rd |
 | --- | --- | --- | --- |
@@ -180,15 +203,34 @@ overdue entries.) At ~2-3s per request the same work is roughly 40h. Raising `ma
 alternative: one container has one browser and returns HTTP 500 under concurrent load, which is exactly why
 the semaphore exists.
 
-**Suggested change.** Create one session per metadata provider (they need separate cookie jars) on first use,
-pass `"session": "<id>"` on every request, and destroy them at the end of the run. Needs care around:
-- **Expiry.** A session can die or its clearance can lapse; a request against a dead session errors. Detect
-  and recreate once, rather than failing the run (fail-fast is right for a *provider* being blocked, wrong
-  for a recoverable session).
-- **The proxy field.** `sessions.create` takes `proxy` itself, and requests then inherit it. Verify whether
-  passing both `session` and `proxy` on a request conflicts - the tunnel must not be silently dropped, or the
-  provider quietly hits the banned datacenter IP.
-- **Lifecycle.** Sessions hold a browser open; destroy them in the same place `stopFlaresolverr` is called.
+**Verified against the live container and tunnel (2026-07-17)**, driving the real `FlaresolverrHttpClient`
+rather than curl:
+
+    anidb/1535 -> http=200 bytes=147874 in 19295ms   <- creates the session, solves the challenge
+    anidb/23   -> http=200 bytes=654781 in  3132ms   <- reused
+    anidb/17   -> http=200 bytes=400158 in  1940ms   <- reused
+    anidb/30   -> http=200 bytes=678090 in  1213ms   <- reused
+    anidb/44   -> http=200 bytes=246448 in   858ms   <- reused
+    simkl      -> http=200 bytes=671510 in 10830ms   <- its own session, its own one-off challenge
+    sessions.list afterwards -> 0                    <- destroyFlaresolverrSessions() reclaimed them
+
+Only the first call per provider pays the challenge, and it keeps getting faster as the browser warms. A
+warm request averages **~1.8s**, which puts the first full crawl at roughly:
+
+| Provider | entries | warm | browser time |
+| --- | --- | --- | --- |
+| anidb.net | 14,517 | ~1.8s | 7.3h |
+| anime-planet.com | 26,674 | ~1.8s | 13.3h |
+| simkl.com | 14,494 | ~1.8s | 7.2h |
+| | | | **~28h queued** |
+
+anisearch is a direct scrape running in parallel at ~29h, so it is the long pole again and the whole run is
+back to roughly a day - versus ~180h before this change.
+
+**Re-challenges are FlareSolverr's own business**, not something this code handles: it inspects every request
+for a challenge and solves it in place, session or not (`anidb/1535` above went through a session and still
+reported "Challenge solved!"). If clearance lapses mid-crawl, one entry costs ~19s and the rest stay fast.
+What the retry here covers is the different case of the session itself being *gone*.
 
 ## Smaller follow-ups
 
