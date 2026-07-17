@@ -232,6 +232,44 @@ for a challenge and solves it in place, session or not (`anidb/1535` above went 
 reported "Challenge solved!"). If clearance lapses mid-crawl, one entry costs ~19s and the rest stay fast.
 What the retry here covers is the different case of the session itself being *gone*.
 
+## 4. simkl: the pagination POST is blocked by Cloudflare even from a residential IP
+
+**Blocks simkl entirely. Found 2026-07-17 during the first crawl after the tunnel went up.** simkl is the
+only provider still producing no files; run it with `--skip simkl` (or put `simkl.com` back into
+`deactivatedMetaDataProviders`) until this is fixed, otherwise it eventually exhausts its retries and
+fail-fast aborts the whole run.
+
+`SimklPaginationIdRangeSelector` fetches pages with a **POST** to `https://simkl.com/ajax/full/anime.php`.
+FlareSolverr cannot get through it:
+
+    Error: Error solving the challenge. Cloudflare has blocked this request.
+    Probably your IP is banned for this site, check in your web browser.
+
+**It is not the IP, and it is not the session change.** Both were checked rather than assumed:
+
+| Test | Result |
+| --- | --- |
+| simkl GET (`/anime/46128`) via tunnel | `200`, 669 KB - fine |
+| simkl POST (`/ajax/full/anime.php`) via tunnel **with** session | Cloudflare blocked |
+| simkl POST via tunnel **without** session (the pre-session code path) | Cloudflare blocked - identical |
+| `request.post` to httpbin via a session, checking `origin` | `142.188.238.43` - the POST **does** exit through the tunnel |
+
+So POSTs are correctly proxied, GETs to simkl work, and only this AJAX POST is refused. FlareSolverr's
+"Probably your IP is banned" is just its generic wording for a block page and is misleading here.
+
+This was invisible until now: simkl has **0 DCS entries**, having never once been crawled successfully, so
+nothing ever exercised this path. The tunnel fixed simkl's IP ban and uncovered a second, unrelated problem
+behind it.
+
+**Where to start.** FlareSolverr's `request.post` submits a form in the browser, and a Cloudflare challenge
+mid-submit cannot be re-driven the way a GET redirect can - so a challenged POST is close to unsolvable by
+design. Options, roughly in order of promise:
+- find a GET-based pagination route (`/anime/all/...` renders server-side and GETs already return 200);
+- warm the session with a GET of the referring page first, so the POST carries clearance cookies plus a
+  plausible `Referer`/`Origin`, and see whether the challenge stops appearing at all;
+- failing both, drive simkl's pagination outside FlareSolverr - a direct `tunnelAwareHttpClient` POST through
+  the tunnel, which is unchallenged only if simkl does not gate that endpoint on JS.
+
 ## Smaller follow-ups
 
 - **Make `DefaultDownloadControlStateUpdater.updateAll()` safe to run twice in the same week.** Its own
