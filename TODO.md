@@ -55,8 +55,8 @@ a residential exit turned out not to be permanent either, so only one of the fou
 | simkl.com | **deactivated** | pagination POST refused even from residential - item 4 |
 | anidb.net | **deactivated** | ~100-200 requests per IP per *day*; needs rotating residential proxies - item 5 |
 
-So `deactivatedMetaDataProviders` holds `anidb.net` and `simkl.com` - anisearch still needs adding, see item 6
-- and the merge-lock re-run below will still leave their cross-provider splits split.
+So `deactivatedMetaDataProviders` holds `anidb.net`, `anisearch.com`, and `simkl.com` (anisearch added
+2026-07-17, see item 6), and the merge-lock re-run below will still leave their cross-provider splits split.
 
 **The residential IP is a consumable, not a fix.** Two of the four have now burned it (anidb within ~50-80
 requests, anisearch within a day), which the table above records provider by provider. The tunnel buys an
@@ -277,8 +277,11 @@ what the pagination POST is scraping - the full anime ID list - without touching
 endpoint at all. **Investigate whether it can enumerate every anime ID** (the thing `/ajax/full/anime.php`
 provides today); if it can, it likely sidesteps this whole item. Watch for the same constraints noted in
 item 6: an API key / OAuth, published rate limits to design the delay around from the start, and a meaningful
-User-Agent. Cheapest first test once on a fresh IP: `curl` with a proper UA against the API host to see what a
-catalog/ID-list endpoint returns unauthenticated, before wiring in a key.
+User-Agent. **Check simkl's API terms for a redistribution clause before building against it** - anisearch's
+Custom Interface prohibits redistributing API data to third parties (item 6), which collides with modb
+publishing a merged dataset; simkl may or may not have the same restriction, but modb redistributes either way,
+so confirm it is allowed before wiring anything in. Cheapest first test once on a fresh IP: `curl` with a proper
+UA against the API host to see what a catalog/ID-list endpoint returns unauthenticated, before wiring in a key.
 
 ## 5. anidb: AntiLeech triggered - the session speedup removed the accidental rate limiter
 
@@ -349,8 +352,13 @@ dropping entries that were only pending, or re-requesting dead ones forever - wh
 calls, against the very quota that is the constraint. So the API trades the one thing we need for nothing we
 lack.
 
-**Decision (2026-07-17): anidb is deactivated in `config.toml` until it has auto-rotating residential
-proxies. Slowing down cannot rescue this one** - the contrast with anisearch (item 6) is the whole point.
+**Decision (2026-07-17): anidb is effectively dropped, not just paused. It stays out of `config.toml` until it
+has auto-rotating residential proxies - which is not on any near-term plan - so treat the dataset as
+permanently carrying no anidb sources unless that changes.** With 0 DCS entries there is nothing already
+captured to fall back on either (contrast anisearch, item 6, which keeps 18,828 frozen entries when off). This
+is not a "revisit soon" item; it is parked pending an infrastructure change that has to come first.
+
+**Slowing down cannot rescue this one** - the contrast with anisearch (item 6) is the whole point.
 anisearch's ban looks volume-triggered, so a long enough delay may genuinely fit under it; anidb's limit is a
 *daily quota per IP*, and a delay cannot buy throughput that the quota does not contain. Do not spend time
 tuning a delay here.
@@ -428,10 +436,17 @@ interface that is not in the path.
 
 ## 6. anisearch: the residential IP is banned too - the one ban that may really be a delay problem
 
-**anisearch TCP-refuses the home IP as of 2026-07-17, and it is the current fail-fast blocker:** every request
-burns its five retries and then aborts the whole run, so no other provider finishes until anisearch is added to
-`deactivatedMetaDataProviders`. Confirmed from the home connection itself - the site serves a browser there
-normally, so this is a ban on the exit the tunnel uses, not an outage.
+**Decision (2026-07-17): deactivated and FROZEN, kept as a revisit - not dropped.** anisearch is now in
+`deactivatedMetaDataProviders`, which unblocks the crawl and keeps its 18,828 already-downloaded entries merged
+into the dataset (they stop refreshing, nothing more). Because the ban looks volume-triggered rather than a hard
+quota, the slow-crawl experiment below is still worth trying on a fresh IP someday; until someone does, the
+frozen data stands and this costs nothing. Contrast anidb (item 5), which is parked pending proxies with no
+saved data to fall back on.
+
+**anisearch TCP-refused the home IP as of 2026-07-17, and was the fail-fast blocker until deactivated:** every
+request burned its five retries and then aborted the whole run, so no other provider finished until anisearch
+was added to `deactivatedMetaDataProviders`. Confirmed from the home connection itself - the site serves a
+browser there normally, so this is a ban on the exit the tunnel uses, not an outage.
 
 **How it presents.** There is no challenge and no 403, just a SOCKS error, which is why it does not look like a
 ban at first:
@@ -462,7 +477,8 @@ IP was refused well inside the first day. **The actual threshold is not measured
 and it is the number the delay should be derived from.
 
 **Next steps, cheapest first.**
-1. Add `anisearch.com` to `deactivatedMetaDataProviders` so the rest of the crawl can finish. No rebuild needed.
+1. ~~Add `anisearch.com` to `deactivatedMetaDataProviders` so the rest of the crawl can finish.~~ DONE
+   2026-07-17. No rebuild needed.
 2. Wait the ban out, re-probing with a single `curl -sv https://anisearch.com/` from the server. If it lapses on
    its own it is a temporary rate ban and the rest of this is worth doing; if it never lapses, treat anisearch
    like anidb and leave it off.
@@ -477,18 +493,33 @@ and it is the number the delay should be derived from.
 **Do not measure the threshold by hammering the flagged IP.** It is the home connection, and probing a live ban
 risks extending it. Same warning as item 5.
 
-**Possible ban-free path: anisearch has an OAuth API (`api.anisearch.com`).** A ratings API is documented
-(`GET/PUT/DELETE /v1/my/{anime|manga}/{id}/ratings`, Bearer token, scopes `ratings.anime`/`ratings.manga`,
-10 req/min). That specific endpoint is the authenticated user's own watchlist, not catalog metadata, so it does
-NOT feed the crawl - but it proves a sanctioned API surface exists. **Investigate whether a public metadata /
-catalog endpoint exists alongside it.** If so it likely sidesteps the ban entirely: an authenticated API with
-published limits has no reason to TCP-refuse us the way the scraper's IP is refused, and we would design the
-delay to its stated limit from the start rather than rediscovering it by getting banned. Two constraints the
-ratings doc already states and any endpoint here probably shares: a low published rate (10/min there is
-~600/hour, ~31h for 18.8k entries), and a **mandatory meaningful User-Agent** - a generic UA is 403'd and can
-get the IP denied, so even an unauthenticated probe must send `App/1.0 (contact)` or it risks burning the
-fresh IP the same way. Cheapest first test once on a new IP: `curl` with a proper UA against the API host to
-see what is reachable unauthenticated, before touching OAuth.
+**Possible ban-free path: anisearch has an OAuth API (`api.anisearch.com`) - but read the redistribution
+clause before investing.** Two things learned so far:
+
+- **The public API does not expose catalog metadata today.** It is "in development" and currently ships only
+  three modules: OAuth 2.0, a User API, and the Ratings API (`GET/PUT/DELETE /v1/my/{anime|manga}/{id}/ratings`,
+  Bearer token, scopes `ratings.anime`/`ratings.manga`, 10 req/min). Ratings is the authenticated user's own
+  watchlist, not the anime metadata the crawl needs. So there is a sanctioned API surface and it is growing, but
+  the endpoint that would feed the crawl is not among the live modules. Worth re-checking as it expands, and
+  worth reading the User API module to see exactly what it returns.
+- **Bulk metadata would come via a "Custom Interface", and its terms conflict with what modb is.** anisearch
+  offers tailored access on request (`api@anisearch.com`), and says it is often free when a project provides
+  value to them (visibility, collaboration, technical synergy) - an open aggregator that links back to anisearch
+  plausibly qualifies. **But: "Redistributing any data obtained via the API to third parties is strictly
+  prohibited."** modb-app publishes a merged dataset (it is a fork of the public anime-offline-database), which
+  IS redistribution to third parties. So API-sourced anisearch data could not go into the published output
+  without an explicit carve-out - exactly what the `api@anisearch.com` conversation would have to secure first.
+  Note the scraped-HTML path carries no such explicit API-terms clause; switching to the API trades a technical
+  ban for a redistribution prohibition. Resolve that clause before building anything against it.
+
+If a metadata endpoint does become available and the redistribution question is settled, the API still beats
+the scraper on mechanics: an authenticated endpoint with published limits has no reason to TCP-refuse us, and
+we would size the delay to its stated limit from the start (10/min there is ~600/hour, ~31h for 18.8k entries)
+rather than rediscovering the limit by getting banned. Two constraints to carry in regardless: that low
+published rate, and a **mandatory meaningful User-Agent** - a generic UA is 403'd and can get the IP denied, so
+even an unauthenticated probe must send `App/1.0 (contact)` or it risks burning the fresh IP. Cheapest first
+test once on a new IP: `curl` with a proper UA against the API host to see what is reachable unauthenticated,
+before touching OAuth.
 
 ## 7. Make the suite fail when a provider's live HTML changes, not just when a fixture does
 
