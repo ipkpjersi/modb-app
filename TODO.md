@@ -31,10 +31,9 @@ probe — it does **not** prove a full crawl survives, so this is the real test 
 addresses within the Hetzner /64 (all still datacenter IPs), so it can't help; FlareSolverr solves
 their Cloudflare JS challenge but not the datacenter-range ban. They need a **residential exit IP**.
 
-**DONE (2026-07-17).** All four residential-only provider(s) are crawling again:
-`deactivatedMetaDataProviders` is now empty, `modb.app.tunnel.enabled = true`, `danted` + `autossh` run on
-the home machine, and `scripts/tunnel/check-tunnel.sh` passes all four checks. Verified against the live
-services rather than assumed:
+**DONE (2026-07-17).** `modb.app.tunnel.enabled = true`, `danted` + `autossh` run on the home machine, and
+`scripts/tunnel/check-tunnel.sh` passes all four checks. All four IP-banned provider(s) became reachable from
+the residential IP - verified against the live services rather than assumed:
 
 | Provider | direct (datacenter) | via tunnel (residential) |
 | --- | --- | --- |
@@ -45,6 +44,19 @@ services rather than assumed:
 
 Cloudflare naming the IP ban outright, and anime-planet/simkl not even being challenged from a residential
 IP, confirms the block was purely IP-based exactly as diagnosed.
+
+**But the ban was hiding a separate blocker behind each provider**, none of them knowable until it lifted, so
+only two of the four actually crawl today:
+
+| Provider | Now | Why |
+| --- | --- | --- |
+| anisearch.com | **crawling** | was purely IP-banned; nothing else wrong |
+| anime-planet.com | **crawling** | its HTML had drifted to a table layout while the parser expected cards; fixed by accepting both |
+| simkl.com | **deactivated** | pagination POST refused even from residential - item 4 |
+| anidb.net | **deactivated** | ~100-200 requests per IP per *day*; needs rotating residential proxies - item 5 |
+
+So `deactivatedMetaDataProviders` holds `anidb.net` and `simkl.com`, and the merge-lock re-run below will
+still leave their cross-provider splits split.
 
 **How it works.**
 - **App side.** `TunnelConfig` (`modb.app.tunnel.*`) selects which provider(s) route through the SOCKS5
@@ -131,21 +143,6 @@ Note the interaction with fail-fast: a multi-day run aborts entirely if any one 
 are not lost (raw/conv files persist and `AlreadyDownloadedIdsFinder` skips them on a re-run), but a re-run
 calls `DefaultDownloadControlStateUpdater.updateAll()` a second time in the same week, which is the trap
 described under "Smaller follow-ups".
-
-### Point the anisearch retry cases at the right failure once tunneled
-
-`AnisearchCrawler`, `AnisearchLastPageDetector` and `AnisearchPaginationIdRangeSelector` each register
-`ThrowableRetryCase(executeBefore = restart) { it is ConnectException }` (plus `UnknownHostException` /
-`NoRouteToHostException`), where `restart` restarts the network interface. That diagnosis assumes the error
-means "our datacenter IP/interface is the problem". Once anisearch is routed through the tunnel a
-`ConnectException` much more likely means **the tunnel died**, and restarting the interface cannot fix that -
-it drops the SSH connection home established and forces autossh to reconnect, delaying recovery rather than
-helping.
-
-Not harmful (the run fails fast and autossh does come back), but the retry is aimed at the wrong failure.
-Consider skipping the interface restart for tunneled provider(s) and surfacing a tunnel-specific error
-instead, so the log says "tunnel is down" rather than silently cycling the network. `TunnelConfig.isTunneled`
-already provides the predicate.
 
 ## 3. Reuse a FlareSolverr session instead of re-solving the challenge every request
 
@@ -252,7 +249,7 @@ FlareSolverr cannot get through it:
 | simkl GET (`/anime/46128`) via tunnel | `200`, 669 KB - fine |
 | simkl POST (`/ajax/full/anime.php`) via tunnel **with** session | Cloudflare blocked |
 | simkl POST via tunnel **without** session (the pre-session code path) | Cloudflare blocked - identical |
-| `request.post` to httpbin via a session, checking `origin` | `142.188.238.43` - the POST **does** exit through the tunnel |
+| `request.post` to httpbin via a session, checking `origin` | the home IP, not the datacenter one - the POST **does** exit through the tunnel |
 
 So POSTs are correctly proxied, GETs to simkl work, and only this AJAX POST is refused. FlareSolverr's
 "Probably your IP is banned" is just its generic wording for a block page and is misleading here.
@@ -270,7 +267,122 @@ design. Options, roughly in order of promise:
 - failing both, drive simkl's pagination outside FlareSolverr - a direct `tunnelAwareHttpClient` POST through
   the tunnel, which is unchallenged only if simkl does not gate that endpoint on JS.
 
-## 5. Make the suite fail when a provider's live HTML changes, not just when a fixture does
+## 5. anidb: AntiLeech triggered - the session speedup removed the accidental rate limiter
+
+**anidb flagged the residential IP on 2026-07-17 and the run aborted. Keep `--skip anidb` until this is
+resolved**, and do not retry against a flagged IP - that risks extending the ban.
+
+    io.github.manamiproject.modb.anidb.CrawlerDetectedException: Crawler has been detected
+
+`AnidbResponseChecker` throws this when the response title is `AniDB AntiLeech - AniDB` or `403 Forbidden`.
+Confirmed still being served to the home IP after the crash, so the ban is on the **residential** IP, not the
+datacenter one. AntiLeech bans are normally temporary.
+
+**Cause: item 3 made anidb roughly 5x faster.**
+
+| | per entry | requests/hour |
+| --- | --- | --- |
+| before sessions | ~19s solve + ~3s delay | ~165 |
+| after sessions | ~1.5s + ~3s delay | **~800** |
+
+The Cloudflare challenge had been an *accidental rate limiter*: every request cost ~19s whether we liked it
+or not, and `random(2500, 3500)` was never doing the throttling. Sessions removed that ballast and the real
+delay turned out to be far too small. Nothing in the codebase expressed the intended request rate, so nothing
+noticed it change.
+
+**The real constraint is a DAILY QUOTA, not a rate - so no delay fixes this.** anidb is reported to allow
+only **~100-200 requests per IP per day** (the figure comes from FileBot's guidance around anidb's API; the
+website's AntiLeech threshold is undocumented but empirically just as low - this run was flagged after
+roughly 50-80 requests across two short runs plus some manual probing).
+
+Separately there is a **flood limit of 2 requests per 5 seconds**, i.e. ~2.5s apart. The existing
+`random(2500, 3500)` already satisfies *that*. The flood limit was never the problem.
+
+What the quota means for a full seed of 14,517 entries:
+
+| requests/day | time for ONE full seed |
+| --- | --- |
+| 100 | ~145 days (4.8 months) |
+| 150 | ~97 days (3.2 months) |
+| 200 | ~73 days (2.4 months) |
+
+Staying under 150/day needs ~576s (~10 min) *between requests*. For scale, an earlier draft of this item
+suggested "10s+ per entry, start conservative" - that is **8,640 requests/day, ~58x over the quota**. Any
+delay worth running is orders of magnitude too fast. This is not a tuning problem.
+
+**Steady state may not fit either.** DCS backoff caps at 12 weeks, so a seeded anidb still needs
+14,517 / 84 days = **~173 requests/day** just to keep every entry inside its refresh window - already at or
+above the quota, before any new entries. Worth measuring before investing in a seed that cannot then be
+maintained.
+
+**The official API is not the way out, and this is settled - do not re-investigate it.** Upstream already
+went down this road: they built a workaround for the problem below ("Workaround in place which reduced the
+number [of] calls") and still abandoned it, because "the integration test showed that this public API
+endpoint is extremely sensitive. Too sensitive for a productive usage. Therefore I see no use for this." So
+the API is a tried-and-rejected option, not an untried one.
+
+The underlying reason it needs a workaround at all - and *why* the app scrapes HTML in the first place - is
+that the API cannot distinguish a **deleted** entry from one **pending addition**; both come back as "not
+found":
+
+| case | UI | API |
+| --- | --- | --- |
+| deleted (e.g. 14248) | distinguishable | "not found" |
+| pending addition (e.g. 19982) | distinguishable | "not found" |
+
+That distinction is load-bearing: deleted entries are recorded in the dead-entries files and never requested
+again, while pending ones must be retried because they may appear later. Losing it means either permanently
+dropping entries that were only pending, or re-requesting dead ones forever - which *increases* the number of
+calls, against the very quota that is the constraint. So the API trades the one thing we need for nothing we
+lack.
+
+**Decision (2026-07-17): anidb is deactivated in `config.toml` until it has auto-rotating residential
+proxies.**
+
+That conclusion follows directly from the constraint. The quota is **per IP**, so the only thing that raises
+throughput is *more IPs* - not a longer delay, not the API, not a smarter crawler. One residential IP buys
+~100-200 requests/day against a 14,517-entry seed that then needs ~173/day forever just to stay refreshed.
+A single home connection cannot do this, and pointing the whole seed at it means months of daily AntiLeech
+risk on the home line.
+
+Consequences to accept meanwhile: the dataset carries no anidb sources. The merge-lock bootstrap does hold
+anidb URLs from upstream, but `--restrict-to-fork` drops them precisely because there is no anidb DCS - so
+those cross-provider splits stay split and "reviewed" lands short of upstream's ~98%.
+
+If it is ever revisited, a rotating-residential-proxy pool is the entry ticket, and the open questions are
+then: a per-provider "max entries per run" cap (does not exist today), and whether the *website's* AntiLeech
+threshold actually matches the quoted API figure - measuring that itself costs quota and risks an IP.
+
+**Also fix regardless: stop rotating the datacenter IP for tunneled provider(s)** - see the note below. It
+cannot help, and it stalls every other provider while it happens.
+
+**Note for whoever picks this up:** debugging anidb burns the same quota, from the same home IP. Budget it.
+
+### Rotating the datacenter IP cannot help a tunneled provider, and it hurts
+
+Generalises the anisearch note that used to live here; the anidb crash proved it.
+
+`AnidbCrawler` reacts to `CrawlerDetectedException` by calling `networkController.restartAsync().await()` and
+retrying once. That logic predates the tunnel and assumes our exit IP is this host's. It no longer is: anidb,
+anime-planet and simkl exit through the tunnel from the *residential* IP, so rotating the server's IPv6
+changes nothing about what the provider sees. Observed in the crash log:
+
+    02:18:32 IPv6 address rotation has been triggered.
+    02:18:33 Waiting for network to be active again.   <- every other provider stalls
+    02:18:35 Waiting for network to be active again.
+    02:18:37 CrawlerDetectedException: Crawler has been detected   <- retry hit the same flagged IP
+
+So the recovery is useless (same exit IP), harmful (`SuspendableHttpClient` blocks all providers while the
+interface bounces), and guaranteed to fail (it retries into the very ban it is reacting to). The same applies
+to anisearch's `ConnectException`/`UnknownHostException`/`NoRouteToHostException` retry cases, where a
+connection failure now most likely means the tunnel died - which a network restart cannot fix, and actively
+delays, since it drops the SSH connection and forces autossh to reconnect.
+
+`TunnelConfig.isTunneled(hostname)` already provides the predicate. For a tunneled provider the honest
+responses are to back off, or to fail fast with a message naming the real cause, rather than to cycle an
+interface that is not in the path.
+
+## 6. Make the suite fail when a provider's live HTML changes, not just when a fixture does
 
 **The gap that let two crawl-stopping bugs reach production on 2026-07-17.** Every provider's tests run on
 every build - they are *not* gated on `deactivatedMetaDataProviders` (`TestAppConfig` throws
