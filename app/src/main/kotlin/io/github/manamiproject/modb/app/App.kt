@@ -26,6 +26,7 @@ import io.github.manamiproject.modb.app.downloadcontrolstate.DefaultDownloadCont
 import io.github.manamiproject.modb.app.extensions.alertDeletedAnimeByTitle
 import io.github.manamiproject.modb.app.fluentapi.*
 import io.github.manamiproject.modb.app.network.LinuxNetworkController
+import io.github.manamiproject.modb.app.network.checkTunnel
 import io.github.manamiproject.modb.app.network.startFlaresolverr
 import io.github.manamiproject.modb.app.network.stopFlaresolverr
 import io.github.manamiproject.modb.app.postprocessors.*
@@ -69,6 +70,12 @@ private suspend fun run(deactivatedProviders: Set<Hostname>) {
     // CLI selection overrides config.toml's 'deactivatedMetaDataProviders' for this run. The decorator feeds the
     // same set to both consumers: the crawler filter below and DownloadControlStateWeeksValidationPostProcessor.
     val appConfig: Config = SelectedProvidersConfig(AppConfig.instance, deactivatedProviders)
+
+    // Provider(s) which are IP-banned on this host's datacenter range only work through the reverse SSH tunnel.
+    // Verified before the password prompt and before FlareSolverr is started, so a missing tunnel costs
+    // nothing, and before any crawler runs, so it can never fall back to the banned direct path unnoticed.
+    checkTunnel(appConfig = appConfig)
+
     val networkController = LinuxNetworkController.instance
     networkController.sudoPasswordValue = passwordPrompt()
     Runtime.getRuntime().addShutdownHook(Thread { networkController.restore() })

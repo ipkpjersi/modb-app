@@ -1,7 +1,9 @@
 package io.github.manamiproject.modb.app.network
 
 import io.github.manamiproject.modb.app.TestAppConfig
+import io.github.manamiproject.modb.app.TestConfigRegistry
 import io.github.manamiproject.modb.app.TestHttpClient
+import io.github.manamiproject.modb.core.config.ConfigRegistry
 import io.github.manamiproject.modb.core.extensions.EMPTY
 import io.github.manamiproject.modb.core.httpclient.HttpClient
 import io.github.manamiproject.modb.core.httpclient.HttpResponse
@@ -53,6 +55,68 @@ internal class FlaresolverrHttpClientTest {
                       "maxTimeout": 120000
                     })
                 """.trimIndent())
+            }
+        }
+
+        @Test
+        fun `tells FlareSolverr to use the tunnel for a provider which needs a residential exit IP`() {
+            runTest {
+                // given
+                var invokedRequestBody = EMPTY
+                val testHttpClient = object : HttpClient by TestHttpClient {
+                    override suspend fun post(url: URL, requestBody: RequestBody, headers: Map<String, Collection<String>>): HttpResponse {
+                        invokedRequestBody = requestBody.toString()
+                        return HttpResponse(
+                            code = 200,
+                            body = "{}".toByteArray(),
+                        )
+                    }
+                }
+                val flaresolverrHttpClient = FlaresolverrHttpClient(
+                    appConfig = TestAppConfig,
+                    tunnelConfig = TunnelConfig(enabledTunnelRegistry()),
+                    httpClient = testHttpClient,
+                )
+
+                // when
+                flaresolverrHttpClient.get(URI("https://anidb.net/anime/1535").toURL())
+
+                // then
+                assertThat(invokedRequestBody).isEqualTo("""
+                    RequestBody(mediaType=application/json, body={
+                      "cmd": "request.get",
+                      "url": "https://anidb.net/anime/1535",
+                      "maxTimeout": 120000,"proxy":{"url":"socks5://172.17.0.1:1080"}
+                    })
+                """.trimIndent())
+            }
+        }
+
+        @Test
+        fun `does not use the tunnel for a provider which keeps the direct datacenter path`() {
+            runTest {
+                // given
+                var invokedRequestBody = EMPTY
+                val testHttpClient = object : HttpClient by TestHttpClient {
+                    override suspend fun post(url: URL, requestBody: RequestBody, headers: Map<String, Collection<String>>): HttpResponse {
+                        invokedRequestBody = requestBody.toString()
+                        return HttpResponse(
+                            code = 200,
+                            body = "{}".toByteArray(),
+                        )
+                    }
+                }
+                val flaresolverrHttpClient = FlaresolverrHttpClient(
+                    appConfig = TestAppConfig,
+                    tunnelConfig = TunnelConfig(enabledTunnelRegistry()),
+                    httpClient = testHttpClient,
+                )
+
+                // when
+                flaresolverrHttpClient.get(URI("https://myanimelist.net/anime/1535").toURL())
+
+                // then
+                assertThat(invokedRequestBody).doesNotContain("proxy")
             }
         }
     }
@@ -145,4 +209,14 @@ internal class FlaresolverrHttpClientTest {
             }
         }
     }
+}
+
+/**
+ * A [ConfigRegistry] with the tunnel switched on and everything else left at its default.
+ */
+private fun enabledTunnelRegistry() = object : ConfigRegistry by TestConfigRegistry {
+    override fun boolean(key: String): Boolean = true
+    override fun string(key: String): String? = null
+    override fun int(key: String): Int? = null
+    override fun <T : Any> list(key: String): List<T>? = null
 }

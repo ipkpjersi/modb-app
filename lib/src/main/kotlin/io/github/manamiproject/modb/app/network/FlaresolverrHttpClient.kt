@@ -23,6 +23,7 @@ import kotlin.time.toDuration
 internal class FlaresolverrHttpClient(
     private val appConfig: Config = AppConfig.instance,
     private val flaresolverrConfig: FlaresolverrConfig = FlaresolverrConfig.instance,
+    private val tunnelConfig: TunnelConfig = TunnelConfig.instance,
     private val httpClient: HttpClient = DefaultHttpClient(
         // FlareSolverr is allowed up to maxTimeout ms to solve a challenge, so our own socket read timeout must
         // exceed that - otherwise a legitimate slow solve trips a spurious SocketTimeoutException and gets retried
@@ -63,7 +64,7 @@ internal class FlaresolverrHttpClient(
               "cmd": "request.post",
               "url": "$url",
               "maxTimeout": $maxTimeout,
-              "postData": "${requestBody.body}"
+              "postData": "${requestBody.body}"${proxyProperty(url)}
             }
         """.trimIndent()
     }
@@ -76,9 +77,22 @@ internal class FlaresolverrHttpClient(
             {
               "cmd": "request.get",
               "url": "$url",
-              "maxTimeout": $maxTimeout
+              "maxTimeout": $maxTimeout${proxyProperty(url)}
             }
         """.trimIndent()
+    }
+
+    /**
+     * FlareSolverr fetches [targetUrl] from inside its own container, so a provider is only routed through
+     * the tunnel if FlareSolverr itself is told to use it. Setting a proxy on the [httpClient] below would
+     * achieve nothing - that client only ever talks to FlareSolverr on localhost.
+     *
+     * Returns the `proxy` property to append to the request payload (leading comma included), or [EMPTY]
+     * for provider(s) which keep the direct datacenter path.
+     */
+    private fun proxyProperty(targetUrl: URL): String = when {
+        tunnelConfig.isTunneled(targetUrl.host) -> ""","proxy":{"url":"${tunnelConfig.socksUrl()}"}"""
+        else -> EMPTY
     }
 
     /**

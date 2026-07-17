@@ -13,7 +13,7 @@ import io.github.manamiproject.modb.app.downloadcontrolstate.DownloadControlStat
 import io.github.manamiproject.modb.app.downloadcontrolstate.DownloadControlStateScheduler
 import io.github.manamiproject.modb.app.network.LinuxNetworkController
 import io.github.manamiproject.modb.app.network.NetworkController
-import io.github.manamiproject.modb.app.network.SuspendableHttpClient
+import io.github.manamiproject.modb.app.network.tunnelAwareHttpClient
 import io.github.manamiproject.modb.core.config.AnimeId
 import io.github.manamiproject.modb.core.config.MetaDataProviderConfig
 import io.github.manamiproject.modb.core.coverage.KoverIgnore
@@ -60,7 +60,7 @@ class AnisearchCrawler(
     private val lastPageDetector: HighestIdDetector = AnisearchLastPageDetector.instance,
     private val paginationIdRangeSelector: PaginationIdRangeSelector<Int> = AnisearchPaginationIdRangeSelector(metaDataProviderConfig = metaDataProviderConfig),
     private val alreadyDownloadedIdsFinder: AlreadyDownloadedIdsFinder = DefaultAlreadyDownloadedIdsFinder.instance,
-    private val httpClient: HttpClient = SuspendableHttpClient(),
+    private val httpClient: HttpClient = tunnelAwareHttpClient(metaDataProviderConfig.hostname()),
     private val downloader: Downloader = AnisearchDownloader(
         metaDataProviderConfig = metaDataProviderConfig,
         httpClient = httpClient,

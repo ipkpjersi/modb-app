@@ -31,18 +31,54 @@ probe — it does **not** prove a full crawl survives, so this is the real test 
 addresses within the Hetzner /64 (all still datacenter IPs), so it can't help; FlareSolverr solves
 their Cloudflare JS challenge but not the datacenter-range ban. They need a **residential exit IP**.
 
-**Goal.** Route selected providers' outbound traffic (both direct HTTP *and* their FlareSolverr
-fetches) through a reverse SSH tunnel to a residential connection.
-- **Provider-scoped:** only residential-required providers use the tunnel; everyone else keeps the
-  direct datacenter path.
-- **simkl** is now confirmed to need the tunnel too (datacenter IP banned even via FlareSolverr) and is
-  currently listed in `deactivatedMetaDataProviders`.
-- **anisearch** is also confirmed datacenter-IP-banned (2026-07-09) and deactivated. Unlike the others
-  it is a direct-scrape provider (no FlareSolverr): from the server every port is TCP-refused, while from
-  a residential IP the crawler's exact request (browser UA + headers) returns 200. So the tunnel will fix
-  it with no other change — verified, not assumed.
-- Once in place, re-enable anidb/anime-planet/simkl/anisearch by removing their hostnames from
-  `deactivatedMetaDataProviders` in `config.toml`. No rebuild needed.
+**DONE (2026-07-17).** All four residential-only provider(s) are crawling again:
+`deactivatedMetaDataProviders` is now empty, `modb.app.tunnel.enabled = true`, `danted` + `autossh` run on
+the home machine, and `scripts/tunnel/check-tunnel.sh` passes all four checks. Verified against the live
+services rather than assumed:
+
+| Provider | direct (datacenter) | via tunnel (residential) |
+| --- | --- | --- |
+| anidb.net | FlareSolverr: *"Cloudflare has blocked this request. Probably your IP is banned for this site"* | `200`, "Challenge solved!" |
+| anime-planet.com | 403 | `200`, "Challenge not detected!" |
+| simkl.com | 403 | `200`, "Challenge not detected!" |
+| anisearch.com | TCP refused (curl exit 7) | `301` |
+
+Cloudflare naming the IP ban outright, and anime-planet/simkl not even being challenged from a residential
+IP, confirms the block was purely IP-based exactly as diagnosed.
+
+**How it works.**
+- **App side.** `TunnelConfig` (`modb.app.tunnel.*`) selects which provider(s) route through the SOCKS5
+  tunnel; `enabled` defaults to `false`, so a host without a tunnel is unaffected. Direct-scrape provider(s)
+  use `tunnelAwareHttpClient(...)`, which keeps the `SuspendableHttpClient` wrapper (IPv6-rotation waits and
+  the retry cases still apply) and only swaps the inner `DefaultHttpClient` for a proxied one - anisearch's
+  three client sites use it. FlareSolverr provider(s) are proxied by FlareSolverr itself: `proxyProperty()`
+  appends `"proxy":{"url":"socks5://..."}` to the payload, keyed off the target URL's host, because it is
+  FlareSolverr's container - not this process - that makes the outbound request. `checkTunnel()` runs in
+  `App.kt` before the sudo prompt and aborts if the tunnel is down while a tunneled provider is active (it
+  no-ops when none is, e.g. `--only anilist`). 21 tests.
+- **Ops.** `scripts/tunnel/`: `sockd.conf`, `modb-tunnel.service`, `check-tunnel.sh`, `README.md`.
+- **The server cannot reach the home machine.** Home dials out (`ssh -R`), so it opens no inbound port and
+  the server holds no key for it. A plain `ssh -R 1080` (reverse *dynamic* forward) would build an ACL-less
+  SOCKS proxy into ssh, letting the server ask it to connect to `192.168.x.x`, the router, or home's own
+  `127.0.0.1:22`. So the forward targets a **Dante daemon** instead
+  (`ssh -R <bind>:1080:127.0.0.1:1080`) whose rules deny loopback + RFC1918 + link-local and allow only
+  80/443 outbound. `check-tunnel.sh` asserts those denials actually bite, against hosts that really exist -
+  a deny test against a non-existent host passes even with the rules removed.
+- **Bind address is the docker bridge gateway (`172.17.0.1`), not `127.0.0.1`**, because FlareSolverr runs
+  in a bridge-network container where `127.0.0.1` is the container itself. A loopback-bound tunnel is
+  invisible to it, so every anidb/anime-planet/simkl request fails with a proxy connection error (Chrome does
+  not fall back to direct, so it is loud rather than a silent ban). The trap is that the host-side checks all
+  still pass, which is why `check-tunnel.sh` probes from inside the container too. Needs
+  `GatewayPorts clientspecified` on this server's sshd, scoped to the tunnel account.
+
+**Two gotchas worth remembering**, both covered in `scripts/tunnel/README.md`: the server's sshd is not on
+port 22 (so `ssh -p` / `scp -P`), and **ufw silently drops container-to-host traffic** (container -> host port
+traverses INPUT, which docker's rules do not bypass), needing
+`ufw allow from 172.17.0.0/16 to 172.17.0.1 port 1080 proto tcp`. Its signature is check 4 reporting *timed
+out* (dropped) rather than *refused* (nothing listening).
+
+**Remaining:** run the full crawl, then re-run the merge-lock bootstrap per the ordering below. Read item 3
+first - the first full crawl is far slower than it needs to be.
 - **Re-run the merge-lock bootstrap after reactivating.** `scripts/bootstrap-merge-locks.py` rebuilds
   `merge.lock` (+ `checked-isolated-entries.txt`) from an upstream anime-offline-database release; canonical
   copies live in `review-data/`. The initial import (2026-07-14) used `--restrict-to-fork` so `merge.lock`
@@ -67,19 +103,23 @@ fetches) through a reverse SSH tunnel to a residential connection.
   flag is only safe once every provider is crawling. See the "Dead-entries validator" note in README's
   Possible improvements for the code change that would remove the `--restrict-to-fork` requirement entirely.
 
-### Handle the stale DCS entries when reactivating
+### The first crawl after reactivation is a big one
 
-anisearch is the only deactivated provider with DCS history: **18,828 entries**, last downloaded in
-`2026-W28`, all with `_nextDownload` set to `2026-W29`, which passed while it was off. (anidb,
-anime-planet and simkl have zero DCS entries — they were never crawled successfully, so they have no
-schedule to go stale and nothing to do here.)
+DCS state at reactivation (2026-07-17):
 
-Nothing is broken by this — `DownloadControlStateWeeksValidationPostProcessor` skips deactivated
-providers — but it does mean **every anisearch entry is overdue**, so the first run after reactivation
-re-downloads all ~18.8k of them in one go. That is the same volume it already did in a normal week
-(`2026-28` downloaded every anisearch entry), so it should be fine, just a long run.
+| Provider | DCS entries | First run does |
+| --- | --- | --- |
+| anisearch.com | 18,828 | re-downloads **all** of them: last fetched `2026-W28`, `_nextDownload` was `2026-W29`, which passed while it was off, so every entry is overdue |
+| anidb.net | 0 | full initial crawl (~14.5k) |
+| anime-planet.com | 0 | full initial crawl (~26.7k) |
+| simkl.com | 0 | full initial crawl (~14.5k) |
 
-If that first run needs to be smaller, spread the schedule out beforehand with:
+Nothing is broken by the overdue anisearch schedule (`DownloadControlStateWeeksValidationPostProcessor`
+skips deactivated providers, and 18.8k is the same volume a normal week already did). The real cost is the
+three zero-history provider(s) crawling everything from scratch through a serialized FlareSolverr - see
+item 3.
+
+If the anisearch catch-up alone ever needs to be smaller, spread the schedule out beforehand with:
 
     scripts/reschedule-dcs.py --hostname anisearch.com --spread 1-6 --apply
 
@@ -87,7 +127,68 @@ That rewrites only `_nextDownload` (never `_lastDownloaded`) and turns the singl
 several smaller ones. The trade-off is that entries pushed further out keep serving their `2026-W28`
 data until their week arrives, so only do it if the one-shot run is actually a problem.
 
-**Depends on item 1** — needs per-provider routing (enable control is done).
+Note the interaction with fail-fast: a multi-day run aborts entirely if any one provider fails. Downloads
+are not lost (raw/conv files persist and `AlreadyDownloadedIdsFinder` skips them on a re-run), but a re-run
+calls `DefaultDownloadControlStateUpdater.updateAll()` a second time in the same week, which is the trap
+described under "Smaller follow-ups".
+
+### Point the anisearch retry cases at the right failure once tunneled
+
+`AnisearchCrawler`, `AnisearchLastPageDetector` and `AnisearchPaginationIdRangeSelector` each register
+`ThrowableRetryCase(executeBefore = restart) { it is ConnectException }` (plus `UnknownHostException` /
+`NoRouteToHostException`), where `restart` restarts the network interface. That diagnosis assumes the error
+means "our datacenter IP/interface is the problem". Once anisearch is routed through the tunnel a
+`ConnectException` much more likely means **the tunnel died**, and restarting the interface cannot fix that -
+it drops the SSH connection home established and forces autossh to reconnect, delaying recovery rather than
+helping.
+
+Not harmful (the run fails fast and autossh does come back), but the retry is aimed at the wrong failure.
+Consider skipping the interface restart for tunneled provider(s) and surfacing a tunnel-specific error
+instead, so the log says "tunnel is down" rather than silently cycling the network. `TunnelConfig.isTunneled`
+already provides the predicate.
+
+## 3. Reuse a FlareSolverr session instead of re-solving the challenge every request
+
+**Biggest remaining win: measured ~180h -> ~40h for the first full crawl.**
+
+`FlaresolverrHttpClient` sends every request as a bare `request.get` / `request.post`. FlareSolverr answers
+each one in a fresh browser context, so anidb's Cloudflare challenge is solved **from scratch on every single
+entry**. Measured through the tunnel on 2026-07-17:
+
+| | 1st request | 2nd | 3rd |
+| --- | --- | --- | --- |
+| no session (current behaviour) | 18.8s | 18.5s | 18.5s |
+| `sessions.create` + `"session": id` | 18.5s | **3.3s** | **2.0s** |
+
+The challenge is solved **once per session**, not per request. Everything after the first call reuses the
+browser and its clearance cookies.
+
+Why it dominates the schedule: FlareSolverr is serialized globally
+(`FlaresolverrConfig.maxConcurrency` defaults to `1`, and `flaresolverrSemaphore` is in the companion object,
+so it is shared by every instance). anidb, anime-planet and simkl therefore queue through one browser rather
+than running in parallel, and wall-clock is the **sum** of their FlareSolverr time, not the max:
+
+| Provider | entries | per request | contribution |
+| --- | --- | --- | --- |
+| anidb.net | 14,517 | 18.7s | 75h |
+| anime-planet.com | 26,674 | 9.2s | 68h |
+| simkl.com | 14,494 | 9.1s | 37h |
+| | | | **~180h total** |
+
+(anisearch is a direct scrape, genuinely parallel, ~29h - it is not the long pole despite having the most
+overdue entries.) At ~2-3s per request the same work is roughly 40h. Raising `maxConcurrency` is *not* the
+alternative: one container has one browser and returns HTTP 500 under concurrent load, which is exactly why
+the semaphore exists.
+
+**Suggested change.** Create one session per metadata provider (they need separate cookie jars) on first use,
+pass `"session": "<id>"` on every request, and destroy them at the end of the run. Needs care around:
+- **Expiry.** A session can die or its clearance can lapse; a request against a dead session errors. Detect
+  and recreate once, rather than failing the run (fail-fast is right for a *provider* being blocked, wrong
+  for a recoverable session).
+- **The proxy field.** `sessions.create` takes `proxy` itself, and requests then inherit it. Verify whether
+  passing both `session` and `proxy` on a request conflicts - the tunnel must not be silently dropped, or the
+  provider quietly hits the banned datacenter IP.
+- **Lifecycle.** Sessions hold a browser open; destroy them in the same place `stopFlaresolverr` is called.
 
 ## Smaller follow-ups
 
