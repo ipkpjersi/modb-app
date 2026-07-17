@@ -270,6 +270,67 @@ design. Options, roughly in order of promise:
 - failing both, drive simkl's pagination outside FlareSolverr - a direct `tunnelAwareHttpClient` POST through
   the tunnel, which is unchallenged only if simkl does not gate that endpoint on JS.
 
+## 5. Make the suite fail when a provider's live HTML changes, not just when a fixture does
+
+**The gap that let two crawl-stopping bugs reach production on 2026-07-17.** Every provider's tests run on
+every build - they are *not* gated on `deactivatedMetaDataProviders` (`TestAppConfig` throws
+`shouldNotBeInvoked()` if anything reads it). They were green the whole time anime-planet was broken, because
+they parse `page-31.html`: a snapshot captured at some point in the past. The test proves "the parser handles
+this saved HTML", never "the parser handles what the provider serves today". The fixture is frozen; the
+website is not.
+
+What that cost:
+- **anime-planet** silently switched its listing from a card grid (`li[data-type=anime]`) to a table
+  (`td[class=tableTitle]`). Tests green, live crawl dead on page 1. Fixed by accepting both layouts, but only
+  after it crashed a run.
+- **simkl** (item 4) fails on a POST that no test exercises at all.
+
+Both hid behind the same thing: those provider(s) had **0 DCS entries**, so nothing had ever compared the
+parsers against reality. Note the fixture added for the table layout is itself a fresh snapshot - it starts
+going stale today, exactly like the last one did.
+
+**Proposal: a live contract check per provider**, deliberately outside the normal suite.
+
+For each provider, fetch the very page the crawler fetches and assert its selectors still match something -
+not a full parse, just "does `//td[@class='tableTitle']/a/@href` still find entries?". That single assertion
+would have caught anime-planet on the day it changed. Cover each entry point that has a selector or an
+endpoint of its own:
+- pagination / id-range selectors (this is where anime-planet broke),
+- highest-id / last-page detectors,
+- and simkl's AJAX POST, which is not a selector problem but the same class of "only the live site knows".
+
+Wiring, so it is first-class but never runs in CI:
+- tag them `@Tag("live")` and add `useJUnitPlatform { excludeTags("live") }` to the normal `test` task;
+- add a `liveCheck` gradle task which runs *only* that tag;
+- run it on a schedule, and before kicking off a long crawl - the cost of finding this at minute 6 of a 30h
+  run versus minute 6 of a 30s check is the entire point.
+
+`LiveSessionSmokeTest` (currently `@Disabled`, needs the tunnel + FlareSolverr) is the seed of this: same
+shape, same infrastructure requirements. Converting it to `@Tag("live")` and adding one such test per
+provider is the concrete first step.
+
+**Do not "fix" this by refreshing the fixtures, and do not replace the fixture tests with live ones.** The
+two answer different questions and both are needed:
+
+| | answers | when it runs |
+| --- | --- | --- |
+| frozen fixture (existing tests) | did *our code change* break the parser? | every build, fast, deterministic |
+| live contract check (this item) | did the *provider* change under us? | scheduled / before a crawl |
+
+A fixture is only a regression test *because* it is frozen. Auto-refreshing one would defeat it: a selector
+this fork breaks would keep passing against freshly fetched HTML that happens to match whatever it now looks
+for. And fetching live in the normal suite would make it slow, networked and flaky, while losing the ability
+to tell "we broke it" from "they changed it". Keep `page-31.html` and `page-table-layout.html` exactly as
+they are; add the live check alongside.
+
+A stronger variant, if it proves worthwhile: have the live check **re-capture** a fixture to a scratch path
+and diff it against the committed one, reporting drift as a reviewable change rather than a bare pass/fail -
+it would tell you *what* changed, not just that something did. It must never overwrite the committed fixture
+in place, for the reason above.
+
+Note this does not replace `check-all-providers.sh`, which only probes reachability. Reachability was never
+the problem here: anime-planet returned a perfectly healthy `200`.
+
 ## Smaller follow-ups
 
 - **Make `DefaultDownloadControlStateUpdater.updateAll()` safe to run twice in the same week.** Its own
