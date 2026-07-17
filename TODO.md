@@ -349,9 +349,31 @@ Consequences to accept meanwhile: the dataset carries no anidb sources. The merg
 anidb URLs from upstream, but `--restrict-to-fork` drops them precisely because there is no anidb DCS - so
 those cross-provider splits stay split and "reviewed" lands short of upstream's ~98%.
 
+**Rotating this host's IPv6 instead is not a shortcut - measured 2026-07-17, do not retry.** The idea is
+reasonable (the /64 holds effectively unlimited addresses, and it had genuinely never been tested: docker's
+default bridge has `EnableIPv6=false`, so FlareSolverr had only ever reached anidb over IPv4). Driving a
+FlareSolverr container on host networking, confirmed egressing from this host's own IPv6:
+
+| path | result |
+| --- | --- |
+| datacenter IPv6 | `error` - "Cloudflare has blocked this request. Probably your IP is banned for this site" |
+| datacenter IPv4 | identical |
+
+Note plain `curl` cannot tell you this: both families return a 403 *challenge* page, and the block only
+appears once the challenge is actually solved. The browser is required to see it.
+
+Two reasons it could not have worked anyway: Cloudflare treats a `/64` as one customer, so rotating inside
+the host's routed /64 looks like a single host; and the block is on Hetzner's address space rather than on any individual address
+that went hot.
+
 If it is ever revisited, a rotating-residential-proxy pool is the entry ticket, and the open questions are
 then: a per-provider "max entries per run" cap (does not exist today), and whether the *website's* AntiLeech
 threshold actually matches the quoted API figure - measuring that itself costs quota and risks an IP.
+
+Worth being clear-eyed about what that pool would be doing: anidb's limit is deliberate, and AntiLeech exists
+to stop exactly this. The tunnel routes *around a ban on datacenter ranges* to visit the site as an ordinary
+residential client, still inside their per-IP budget. A pool sized to pull 14,517 pages is instead defeating
+the budget itself, and the realistic response from a provider that already ships AntiLeech is to block harder.
 
 **Also fix regardless: stop rotating the datacenter IP for tunneled provider(s)** - see the note below. It
 cannot help, and it stalls every other provider while it happens.
