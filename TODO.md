@@ -233,12 +233,51 @@ for a challenge and solves it in place, session or not (`anidb/1535` above went 
 reported "Challenge solved!"). If clearance lapses mid-crawl, one entry costs ~19s and the rest stay fast.
 What the retry here covers is the different case of the session itself being *gone*.
 
-## 4. simkl: the pagination POST is blocked by Cloudflare even from a residential IP
+## 4. simkl: enumeration is not achievable - DROP/keep permanently skipped
 
-**Blocks simkl entirely. Found 2026-07-17 during the first crawl after the tunnel went up.** simkl is the
-only provider still producing no files; run it with `--skip simkl` (or put `simkl.com` back into
-`deactivatedMetaDataProviders`) until this is fixed, otherwise it eventually exhausts its retries and
-fail-fast aborts the whole run.
+**RESOLVED as NOT ACHIEVABLE (2026-07-19). simkl has no reachable way to enumerate its anime IDs by any
+path - scrape or API - so keep it permanently `--skip simkl`** (or leave `simkl.com` in
+`deactivatedMetaDataProviders`). Do not re-investigate from scratch; the three findings below each close a
+different avenue and were verified, not assumed. simkl has had **0 DCS entries** the entire time and is a
+marginal 9th source - the fork db is fine without it, and the effort-to-value is deeply upside-down.
+
+**Why every path is closed (verified 2026-07-19 from a real residential browser + the API spec):**
+
+1. **The pagination POST is dead even for a real human.** A hand-replayed POST to `/ajax/full/anime.php`
+   from real Chrome, carrying a **valid `cf_clearance` cookie**, correct `Origin`/`Referer`/`x-requested-with`
+   /`sec-fetch-*` and a real UA, still returns **403** with `server-timing: cfEdge;dur=2,cfOrigin;dur=0` - i.e.
+   Cloudflare's **edge WAF rejects it before it ever reaches simkl's origin**. This is a firewall/bot-management
+   rule ("Sorry, you have been blocked... the action you just performed triggered the security solution"), NOT a
+   solvable JS/cookie challenge. => `cf_clearance` warming, FlareSolverr, and header/UA spoofing are ALL dead:
+   if genuine Chrome with valid clearance gets 403, nothing modb can send will do better.
+2. **The GET year-page can't be paginated either.** `/anime/all/{year}/a-z/` GETs return 200 and server-render
+   only the first page (~20 entries); **scrolling the live page in a real browser loads NO further entries** -
+   the infinite-scroll fires that same dead POST. So GET-only enumeration caps at ~first-page-per-year and the
+   site itself offers a human no way past it. Insufficient and unfixable.
+3. **The public API has no enumeration endpoint.** Verified against the OpenAPI rewrite at `api.simkl.org`
+   (cross-checked vs the raw Apiary spec and `api.simkl.org/llms.txt`). The only anime GETs are `/anime/{id}`,
+   `/anime/episodes/{id}`, `/anime/airing`, `/anime/genres`, `/anime/best`, `/anime/premieres`. There is **no
+   `/anime/all` / bulk dump / full-ID-list endpoint**; the discovery routes are filtered/ranked slices (max
+   50/page) that can't be walked to reconstruct the full ~14.5k ID set. The one thing modb needs - complete
+   enumeration - the API structurally cannot provide.
+
+**The only technically-viable API pattern collides with the API terms.** modb is a cross-provider merger and
+already holds MAL/AniDB IDs, so it could invert the problem: for each anime it already knows, resolve the Simkl
+entry via the API's lookup-by-external-id (`/search/id?mal=...` / the `/redirect` mapping), sidestepping both
+the dead POST and the missing enumeration endpoint using only documented, ban-free GETs under 10/sec. BUT the
+Simkl API rules forbid modb's exact use: Rule 2 - the catalog/discovery endpoints are "not authorized for use
+in conjunction with other competing services of the same nature if your service or app does not provide Simkl
+login and Sync functionality"; Rule 3 - "Simkl is built for tracking and discovery, not as a CDN for the world's
+metadata." modb is a competing anime DB that redistributes a merged dataset and offers no Simkl login/sync.
+Worse, using the API means explicitly agreeing to those terms to obtain a `client_id` they suspend "without
+warning, no appeal" - so the external-id route would be knowingly violating signed terms from a killable key,
+arguably a worse position than the unauthenticated scrape. Same class of collision as anisearch's Custom
+Interface clause (item 6). => building the API path is a policy decision, not an engineering one; do not
+build it on the crawler's own judgement.
+
+**Historical context (kept for reference).** The block was found 2026-07-17 during the first crawl after the
+tunnel went up - simkl was the only provider producing no files. The earlier read (below) that it was merely
+"a challenged POST, close to unsolvable" underestimated it: it is a hard edge WAF block, not a challenge.
 
 `SimklPaginationIdRangeSelector` fetches pages with a **POST** to `https://simkl.com/ajax/full/anime.php`.
 FlareSolverr cannot get through it:
@@ -262,26 +301,12 @@ This was invisible until now: simkl has **0 DCS entries**, having never once bee
 nothing ever exercised this path. The tunnel fixed simkl's IP ban and uncovered a second, unrelated problem
 behind it.
 
-**Where to start.** FlareSolverr's `request.post` submits a form in the browser, and a Cloudflare challenge
-mid-submit cannot be re-driven the way a GET redirect can - so a challenged POST is close to unsolvable by
-design. Options, roughly in order of promise:
-- find a GET-based pagination route (`/anime/all/...` renders server-side and GETs already return 200);
-- warm the session with a GET of the referring page first, so the POST carries clearance cookies plus a
-  plausible `Referer`/`Origin`, and see whether the challenge stops appearing at all;
-- failing both, drive simkl's pagination outside FlareSolverr - a direct `tunnelAwareHttpClient` POST through
-  the tunnel, which is unchallenged only if simkl does not gate that endpoint on JS.
-
-**Possible ban-free path: simkl has a public API (`api.simkl.com`).** Unlike the anisearch case (item 6),
-simkl's is a well-known general catalog/metadata API, not just a personal-list one, so it may cover exactly
-what the pagination POST is scraping - the full anime ID list - without touching the Cloudflare-gated AJAX
-endpoint at all. **Investigate whether it can enumerate every anime ID** (the thing `/ajax/full/anime.php`
-provides today); if it can, it likely sidesteps this whole item. Watch for the same constraints noted in
-item 6: an API key / OAuth, published rate limits to design the delay around from the start, and a meaningful
-User-Agent. **Check simkl's API terms for a redistribution clause before building against it** - anisearch's
-Custom Interface prohibits redistributing API data to third parties (item 6), which collides with modb
-publishing a merged dataset; simkl may or may not have the same restriction, but modb redistributes either way,
-so confirm it is allowed before wiring anything in. Cheapest first test once on a fresh IP: `curl` with a proper
-UA against the API host to see what a catalog/ID-list endpoint returns unauthenticated, before wiring in a key.
+**Superseded options (why the once-promising routes were abandoned).** The earlier plan was to (a) find a
+GET-based pagination route, (b) warm the session with a GET so the POST carried clearance cookies, or (c) drive
+the POST outside FlareSolverr through the tunnel. Finding 1 above kills (b) and (c) - a real browser with valid
+`cf_clearance` already gets an edge 403, so no client-side variant helps. Finding 2 kills (a) - the live page
+won't paginate past the first page even for a human. The API was floated as a ban-free path but finding 3 shows
+it cannot enumerate, and the lookup-by-external-id alternative is barred by the API terms. Nothing left to try.
 
 ## 5. anidb: AntiLeech triggered - the session speedup removed the accidental rate limiter
 
