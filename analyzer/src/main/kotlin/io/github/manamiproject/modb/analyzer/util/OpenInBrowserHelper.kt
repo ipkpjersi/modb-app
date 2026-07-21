@@ -25,7 +25,7 @@ internal object OpenInBrowserHelper {
         val options = mutableListOf(
             "[keep] (= add merge lock as is)",
             "[skip] (= don't create merge lock for this entry)",
-            "[a valid URL] (= add URL to merge lock)",
+            "[paste a valid URL] (= add URL to merge lock)",
         )
 
         if (currentEntryUris.size == 1) {
@@ -79,6 +79,11 @@ internal object OpenInBrowserHelper {
         } else {
             currentEntryUris
         } + searchLinkForMissingMetaDataProvider
+
+        // Print every URL that would be auto-opened (the entry's own sources plus search links for the missing
+        // providers) as clickable OSC 8 hyperlinks, so the review is fully usable over a plain terminal where the
+        // browser cannot be opened automatically.
+        println(clickableLinks(urisToOpenInBrowser))
 
         return urisToOpenInBrowser
     }

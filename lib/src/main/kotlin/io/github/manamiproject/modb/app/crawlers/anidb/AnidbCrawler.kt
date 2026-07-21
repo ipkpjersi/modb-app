@@ -12,6 +12,7 @@ import io.github.manamiproject.modb.app.crawlers.IdRangeSelector
 import io.github.manamiproject.modb.app.crawlers.IntegerBasedIdRangeSelector
 import io.github.manamiproject.modb.app.dataset.DeadEntriesAccessor
 import io.github.manamiproject.modb.app.dataset.DefaultDeadEntriesAccessor
+import io.github.manamiproject.modb.app.network.FlaresolverrHttpClient
 import io.github.manamiproject.modb.app.network.LinuxNetworkController
 import io.github.manamiproject.modb.app.network.NetworkController
 import io.github.manamiproject.modb.app.network.SuspendableHttpClient
@@ -51,7 +52,7 @@ class AnidbCrawler(
         metaDataProviderConfig = metaDataProviderConfig,
         highestIdDetector = AnidbHighestIdDetector.instance,
     ),
-    private val httpClient: HttpClient = SuspendableHttpClient(),
+    private val httpClient: HttpClient = SuspendableHttpClient(httpClient = FlaresolverrHttpClient()),
     private val downloader: Downloader = AnidbDownloader(
         metaDataProviderConfig = metaDataProviderConfig,
         httpClient = httpClient,
@@ -124,7 +125,13 @@ class AnidbCrawler(
     @KoverIgnore
     private suspend fun wait() {
         excludeFromTestContext(metaDataProviderConfig) {
-            delay(random(1500, 2500).toDuration(MILLISECONDS))
+            // anidb's binding limit is a DAILY QUOTA per IP (~100-200 requests/day, see TODO item 5), not a
+            // per-request rate, so this delay cannot buy throughput and anidb stays --skip until a rotating
+            // residential-proxy pool exists. This 2.5-3.5s gap only satisfies anidb's separate flood limit of
+            // 2 requests per 5 seconds. Do NOT reduce it, and never go faster than this: item 3's session
+            // reuse silently removed the ~19s Cloudflare solve that had been acting as an accidental rate
+            // limiter, the rate jumped to ~800 requests/hour, and the residential IP was flagged for AntiLeech.
+            delay(random(2500, 3500).toDuration(MILLISECONDS))
         }
     }
 

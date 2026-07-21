@@ -14,7 +14,9 @@ import java.net.URL
  * @since 6.0.0
  */
 public class FromUrlDeserializer<out T>(
-    private val httpClient: HttpClient = DefaultHttpClient.instance,
+    // Keep the dataset download streaming (consumed via bodyAsStream, e.g. wrapped in ZstdInputStream)
+    // instead of buffering the whole file in memory.
+    private val httpClient: HttpClient = DefaultHttpClient(bufferResponseBody = false),
     private val deserializer: Deserializer<LifecycleAwareInputStream, T>,
 ): Deserializer<URL, T> {
 

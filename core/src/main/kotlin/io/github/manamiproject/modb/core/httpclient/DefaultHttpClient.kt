@@ -43,6 +43,7 @@ import java.util.concurrent.TimeUnit.*
  * + Executes request again.
  * @since 9.0.0
  * @param proxy **Default** is [NO_PROXY]
+ * @param readTimeoutInSeconds Socket read timeout in seconds applied to the default [okhttpClient]. **Default** is `60`.
  * @property protocols List of supported HTTP protocol versions in the order of preference. Default is `HTTP/2, HTTP/1.1`.
  * @property okhttpClient Instance of the OKHTTP client on which this client is based.
  * @property isTestContext Whether this runs in the unit test context or not.
@@ -52,17 +53,19 @@ public class DefaultHttpClient(
     proxy: Proxy = NO_PROXY,
     useCustomRedirectInterceptor: Boolean = false,
     private val protocols: MutableList<HttpProtocol> = mutableListOf(HTTP_2, HTTP_1_1),
+    readTimeoutInSeconds: Long = 60L,
     private var okhttpClient: Call.Factory = OkHttpClient.Builder()
         .followRedirects(!useCustomRedirectInterceptor)
         .followSslRedirects(!useCustomRedirectInterceptor)
         .addInterceptor(RedirectInterceptor(useCustomRedirectInterceptor))
         .connectTimeout(5L, SECONDS)
         .protocols(mapHttpProtocols(protocols))
-        .readTimeout(60L, SECONDS)
+        .readTimeout(readTimeoutInSeconds, SECONDS)
         .proxy(proxy)
         .build(),
     private val isTestContext: Boolean = false,
     private val headerCreator: HeaderCreator = DefaultHeaderCreator.instance,
+    private val bufferResponseBody: Boolean = true,
 ) : HttpClient {
 
     private val retryBehavior: RetryBehavior = RetryBehavior()
@@ -182,7 +185,19 @@ public class DefaultHttpClient(
             }
 
             responseOrException = safelyExecute {
-                okhttpClient.newCall(request.newBuilder().build()).execute().toHttpResponse()
+                val response = okhttpClient.newCall(request.newBuilder().build()).execute().toHttpResponse()
+                if (bufferResponseBody && response.isOk()) {
+                    /*
+                        Read the whole body here, inside the retry try-catch, so a timeout while
+                        streaming the response body is retried like a connect/header timeout instead
+                        of escaping to the caller and aborting the crawl. The bytes are re-wrapped in
+                        an in-memory response so bodyAsStream() still works on the returned response.
+                        Streaming consumers opt out via bufferResponseBody = false to keep true streaming.
+                    */
+                    HttpResponse(response.code, response.bodyAsByteArray(), response.headers.toMutableMap())
+                } else {
+                    response
+                }
             }
 
             if (retryCase !is NoRetry) {
@@ -192,7 +207,14 @@ public class DefaultHttpClient(
 
             when (requiresRetry(responseOrException)) {
                 true -> {
-                    log.debug { "[${request.method} ${request.url}] Requires retry." }
+                    if (attempt < retryBehavior.maxAttempts) {
+                        val reason = when (val result = responseOrException) {
+                            is HttpResponse -> "http status code [${result.code}]"
+                            is Throwable -> "[${result::class.simpleName}: ${result.message}]"
+                            else -> "an unknown result"
+                        }
+                        log.warn { "[${request.method} ${request.url}] failed with $reason - retrying (attempt ${attempt + 1} of ${retryBehavior.maxAttempts})." }
+                    }
 
                     if (responseOrException is HttpResponse) {
                         responseOrException.close()

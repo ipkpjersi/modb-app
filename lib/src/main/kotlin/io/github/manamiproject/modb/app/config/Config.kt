@@ -68,6 +68,28 @@ interface Config: ContextAware {
     )
 
     /**
+     * Hostnames of metadata provider which are currently deactivated.
+     * No crawler is started for a deactivated metadata provider, which means that it doesn't produce any files in
+     * [workingDir] and that its DCS entries are not updated. Data which has been downloaded before the metadata
+     * provider was deactivated is still merged into the dataset. Consequently the DCS entries of a deactivated
+     * metadata provider keep the schedule of their last successful download and their week for the next download
+     * inevitably passes. They are therefore excluded from
+     * [io.github.manamiproject.modb.app.postprocessors.DownloadControlStateWeeksValidationPostProcessor].
+     * @since 1.13.0
+     * @return Hostnames of all metadata provider which are currently deactivated.
+     */
+    fun deactivatedMetaDataProviders(): Set<Hostname> = emptySet()
+
+    /**
+     * Checks whether a metadata provider is currently deactivated.
+     * @since 1.13.0
+     * @param metaDataProviderConfig Configuration for a specific metadata provider.
+     * @see deactivatedMetaDataProviders
+     * @return `true` if no crawler is supposed to run for the given metadata provider.
+     */
+    fun isDeactivated(metaDataProviderConfig: MetaDataProviderConfig): Boolean = deactivatedMetaDataProviders().contains(metaDataProviderConfig.hostname())
+
+    /**
      * Finds a specific [MetaDataProviderConfig] for a given hostname.
      * @since 1.0.0
      * @param host Hostname of a metadata provider
@@ -90,6 +112,24 @@ interface Config: ContextAware {
      * @return Directory which contains subdirectories for all download control state files.
      */
     fun downloadControlStateDirectory(): Directory
+
+    /**
+     * Name of the network interface used for crawling, for example `eth0`.
+     * The [io.github.manamiproject.modb.app.network.NetworkController] rotates the outbound IPv6 source address on this
+     * interface whenever a metadata provider starts rate limiting requests.
+     * @since 18.0.0
+     * @return Name of the network interface.
+     */
+    fun networkInterface(): String
+
+    /**
+     * Routed IPv6 `/64` prefix available on [networkInterface] given in CIDR notation, for example
+     * `2001:db8:1234:5678::/64`. Every address within this prefix must be routed to the machine so that it can be used
+     * as an outbound source address for crawling.
+     * @since 18.0.0
+     * @return IPv6 `/64` prefix in CIDR notation.
+     */
+    fun ipv6Prefix(): String
 
     /**
      * Determines if anime of a specific metadata provider can change their Ids.

@@ -42,6 +42,7 @@ public class KitsuDownloader(
             200 -> {
                 val data = extractor.extract(responseBody, mapOf(
                     "entries" to "$.meta.count",
+                    "title" to "$.data[0].attributes.canonicalTitle",
                 ))
                 val entries = data.intOrDefault("entries")
                 when (entries) {
@@ -50,7 +51,17 @@ public class KitsuDownloader(
                         EMPTY
                     }
                     1 -> {
-                        responseBody
+                        // kitsu soft-deletes an entry by keeping it live (200, meta count 1) but replacing its
+                        // canonicalTitle with a "delete"/"deleted" marker (slug becomes "delete-<uuid>", synopsis
+                        // "to be deleted"). Treat it as a dead entry here - same as a 404 or a meta count of 0 -
+                        // so it is recorded and skipped instead of being converted and later aborting the merge
+                        // via alertDeletedAnimeByTitle().
+                        if (data.stringOrDefault("title").lowercase() in DELETED_ENTRY_TITLE_MARKERS) {
+                            onDeadEntry.invoke(id)
+                            EMPTY
+                        } else {
+                            responseBody
+                        }
                     }
                     else -> throw IllegalStateException("Anime with id [${id}] returned [$entries] entries.")
                 }
@@ -65,6 +76,9 @@ public class KitsuDownloader(
 
     public companion object {
         private val log by LoggerDelegate()
+
+        /** kitsu titles that mark a soft-deleted (dead) entry which is still served as a live 200. */
+        private val DELETED_ENTRY_TITLE_MARKERS = setOf("delete", "deleted")
 
         /**
          * Singleton of [KitsuDownloader]

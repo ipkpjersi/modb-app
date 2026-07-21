@@ -12,7 +12,9 @@ import io.github.manamiproject.modb.app.crawlers.simkl.SimklPaginationIdRangeSel
 import io.github.manamiproject.modb.core.date.weekOfYear
 import io.github.manamiproject.modb.core.config.ConfigRegistry
 import io.github.manamiproject.modb.core.config.DefaultConfigRegistry
+import io.github.manamiproject.modb.core.config.Hostname
 import io.github.manamiproject.modb.core.config.MetaDataProviderConfig
+import io.github.manamiproject.modb.core.config.SetPropertyDelegate
 import io.github.manamiproject.modb.core.config.StringPropertyDelegate
 import io.github.manamiproject.modb.core.extensions.Directory
 import io.github.manamiproject.modb.core.extensions.directoryExists
@@ -49,6 +51,22 @@ class AppConfig(
     private val downloadControlStateDirectory: String by StringPropertyDelegate(
         namespace = CONFIG_NAMESPACE,
         configRegistry = configRegistry,
+    )
+
+    private val networkInterface: String by StringPropertyDelegate(
+        namespace = CONFIG_NAMESPACE,
+        configRegistry = configRegistry,
+    )
+
+    private val ipv6Prefix: String by StringPropertyDelegate(
+        namespace = CONFIG_NAMESPACE,
+        configRegistry = configRegistry,
+    )
+
+    private val deactivatedMetaDataProviders: Set<Hostname> by SetPropertyDelegate(
+        namespace = CONFIG_NAMESPACE,
+        configRegistry = configRegistry,
+        default = emptySet(),
     )
 
     override fun downloadsDirectory(): Directory {
@@ -100,6 +118,25 @@ class AppConfig(
         val dir = Path(downloadControlStateDirectory)
         check(dir.directoryExists()) { "Output directory set by 'downloadControlStateDirectory' to [$downloadControlStateDirectory] doesn't exist or is not a directory." }
         return dir
+    }
+
+    override fun networkInterface(): String {
+        check(networkInterface.isNotBlank()) { "Network interface set by 'networkInterface' must not be blank." }
+        return networkInterface
+    }
+
+    override fun ipv6Prefix(): String {
+        check(ipv6Prefix.isNotBlank()) { "IPv6 prefix set by 'ipv6Prefix' must not be blank." }
+        return ipv6Prefix
+    }
+
+    override fun deactivatedMetaDataProviders(): Set<Hostname> {
+        val knownHostnames = metaDataProviderConfigurations().map { it.hostname() }.toSet()
+        val unknownHostnames = deactivatedMetaDataProviders - knownHostnames
+
+        check(unknownHostnames.isEmpty()) { "Unknown hostnames set by 'deactivatedMetaDataProviders': [${unknownHostnames.sorted().joinToString(", ")}]." }
+
+        return deactivatedMetaDataProviders
     }
 
     companion object {

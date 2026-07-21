@@ -8,7 +8,7 @@ import io.github.manamiproject.modb.app.downloadcontrolstate.DownloadControlStat
 import io.github.manamiproject.modb.app.extensions.checkedBody
 import io.github.manamiproject.modb.app.network.LinuxNetworkController
 import io.github.manamiproject.modb.app.network.NetworkController
-import io.github.manamiproject.modb.app.network.SuspendableHttpClient
+import io.github.manamiproject.modb.app.network.tunnelAwareHttpClient
 import io.github.manamiproject.modb.core.config.AnimeId
 import io.github.manamiproject.modb.core.config.MetaDataProviderConfig
 import io.github.manamiproject.modb.core.extensions.EMPTY
@@ -41,7 +41,7 @@ import java.net.UnknownHostException
 class AnisearchPaginationIdRangeSelector(
     private val metaDataProviderConfig: MetaDataProviderConfig,
     private val paginationIdRangeSelectorConfig: MetaDataProviderConfig = AnisearchPaginationIdRangeSelectorConfig,
-    private val httpClient: HttpClient = SuspendableHttpClient(),
+    private val httpClient: HttpClient = tunnelAwareHttpClient(metaDataProviderConfig.hostname()),
     private val networkController: NetworkController = LinuxNetworkController.instance,
     private val extractor: DataExtractor = XmlDataExtractor,
     private val downloadControlStateScheduler: DownloadControlStateScheduler = DefaultDownloadControlStateScheduler.instance,

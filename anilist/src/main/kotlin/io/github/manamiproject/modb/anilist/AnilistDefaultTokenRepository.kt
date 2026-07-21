@@ -9,6 +9,9 @@ import io.github.manamiproject.modb.core.extensions.neitherNullNorBlank
  */
 public object AnilistDefaultTokenRepository : AnilistTokenRepository {
 
+    // The token is read and written by multiple coroutines on different threads. Volatile ensures that a renewed token
+    // is visible to all of them right away.
+    @Volatile
     private var currentToken = AnilistToken(EMPTY, EMPTY)
 
     override var token: AnilistToken

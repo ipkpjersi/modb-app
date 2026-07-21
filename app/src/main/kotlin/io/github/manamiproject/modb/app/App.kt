@@ -1,8 +1,17 @@
 package io.github.manamiproject.modb.app
 
+import io.github.manamiproject.AnimenewsnetworkConfig
+import io.github.manamiproject.modb.anidb.AnidbConfig
+import io.github.manamiproject.modb.anilist.AnilistConfig
+import io.github.manamiproject.modb.animeplanet.AnimePlanetConfig
 import io.github.manamiproject.modb.anisearch.AnisearchConfig
 import io.github.manamiproject.modb.anisearch.AnisearchRelationsConfig
+import io.github.manamiproject.modb.app.cli.MetaDataProviderSelection
+import io.github.manamiproject.modb.app.config.AppConfig
+import io.github.manamiproject.modb.app.config.Config
+import io.github.manamiproject.modb.app.config.SelectedProvidersConfig
 import io.github.manamiproject.modb.app.convfiles.DefaultRawFileConversionService
+import io.github.manamiproject.modb.app.crawlers.Crawler
 import io.github.manamiproject.modb.app.crawlers.anidb.AnidbCrawler
 import io.github.manamiproject.modb.app.crawlers.anilist.AnilistCrawler
 import io.github.manamiproject.modb.app.crawlers.animenewsnetwork.AnimenewsnetworkCrawler
@@ -17,11 +26,23 @@ import io.github.manamiproject.modb.app.downloadcontrolstate.DefaultDownloadCont
 import io.github.manamiproject.modb.app.extensions.alertDeletedAnimeByTitle
 import io.github.manamiproject.modb.app.fluentapi.*
 import io.github.manamiproject.modb.app.network.LinuxNetworkController
+import io.github.manamiproject.modb.app.network.checkTunnel
+import io.github.manamiproject.modb.app.network.destroyFlaresolverrSessions
+import io.github.manamiproject.modb.app.network.startFlaresolverr
+import io.github.manamiproject.modb.app.network.stopFlaresolverr
 import io.github.manamiproject.modb.app.postprocessors.*
+import io.github.manamiproject.modb.core.config.Hostname
+import io.github.manamiproject.modb.core.config.MetaDataProviderConfig
 import io.github.manamiproject.modb.core.coroutines.CoroutineManager.runCoroutine
 import io.github.manamiproject.modb.core.coroutines.ModbDispatchers.LIMITED_NETWORK
 import io.github.manamiproject.modb.core.coverage.KoverIgnore
 import io.github.manamiproject.modb.core.extensions.EMPTY
+import io.github.manamiproject.modb.kitsu.KitsuConfig
+import io.github.manamiproject.modb.livechart.LivechartConfig
+import io.github.manamiproject.modb.myanimelist.MyanimelistConfig
+import io.github.manamiproject.modb.simkl.SimklConfig
+import java.util.concurrent.atomic.AtomicBoolean
+import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import javax.swing.JOptionPane.*
@@ -30,27 +51,80 @@ import javax.swing.SwingUtilities
 import kotlin.system.exitProcess
 
 @KoverIgnore
-fun main() = runCoroutine {
-    LinuxNetworkController.instance.sudoPasswordValue = passwordPrompt()
+fun main(args: Array<String>) {
+    // Resolve provider selection (--only/--skip) before any sudo prompt or crawler starts, so a bad flag or an
+    // unknown provider name fails fast with usage instead of after prompting for a password.
+    val deactivatedProviders = try {
+        MetaDataProviderSelection().deactivatedProvidersForRun(args)
+    } catch (e: IllegalArgumentException) {
+        System.err.println(e.message)
+        System.err.println(MetaDataProviderSelection.USAGE)
+        exitProcess(1)
+    }
+
+    runCoroutine {
+        run(deactivatedProviders)
+    }
+}
+
+@KoverIgnore
+private suspend fun run(deactivatedProviders: Set<Hostname>) {
+    // CLI selection overrides config.toml's 'deactivatedMetaDataProviders' for this run. The decorator feeds the
+    // same set to both consumers: the crawler filter below and DownloadControlStateWeeksValidationPostProcessor.
+    val appConfig: Config = SelectedProvidersConfig(AppConfig.instance, deactivatedProviders)
+
+    // Provider(s) which are IP-banned on this host's datacenter range only work through the reverse SSH tunnel.
+    // Verified before the password prompt and before FlareSolverr is started, so a missing tunnel costs
+    // nothing, and before any crawler runs, so it can never fall back to the banned direct path unnoticed.
+    checkTunnel(appConfig = appConfig)
+
+    val networkController = LinuxNetworkController.instance
+    networkController.sudoPasswordValue = passwordPrompt()
+
+    // Set once the run reaches its end, so the hook below can tell a finished run from a Ctrl+C or a crash.
+    val completedNormally = AtomicBoolean(false)
+
+    Runtime.getRuntime().addShutdownHook(Thread {
+        if (!completedNormally.get()) {
+            // println rather than the logger: logback installs its own shutdown hook, and if it has already
+            // run then log statements from here silently go nowhere. This message has to be seen, because it
+            // is what tells you the IPv6 restore is underway and that killing the process now would skip it.
+            println("\nGracefully shutting down. Restoring the network configuration, do not kill this process.")
+        }
+        networkController.restore()
+    })
+    val flaresolverrContainerId = startFlaresolverr()
 
     val rawFileConversionService = DefaultRawFileConversionService.instance
     rawFileConversionService.start()
 
+    // Which metadata provider are deactivated is defined by 'deactivatedMetaDataProviders' in config.toml, so a
+    // provider can be switched off without a rebuild. Crawlers are created lazily to keep a deactivated provider
+    // from being instantiated at all.
     withContext(LIMITED_NETWORK) {
-        launch { AnidbCrawler.instance.start() }
-        launch { AnilistCrawler.instance.start() }
-        launch { AnimePlanetCrawler.instance.start() }
-        launch { AnimenewsnetworkCrawler.instance.start() }
-        launch { AnisearchCrawler(metaDataProviderConfig = AnisearchConfig).start() }
-        launch { AnisearchCrawler(metaDataProviderConfig = AnisearchRelationsConfig).start() }
-        launch { KitsuCrawler.instance.start() }
-        launch { LivechartCrawler.instance.start() }
-        launch { MyanimelistCrawler.instance.start() }
-        launch { SimklCrawler.instance.start() }
-    }.join()
+        listOf<Pair<MetaDataProviderConfig, () -> Crawler>>(
+            AnidbConfig to { AnidbCrawler.instance },
+            AnilistConfig to { AnilistCrawler.instance },
+            AnimePlanetConfig to { AnimePlanetCrawler.instance },
+            AnimenewsnetworkConfig to { AnimenewsnetworkCrawler.instance },
+            AnisearchConfig to { AnisearchCrawler(metaDataProviderConfig = AnisearchConfig) },
+            AnisearchRelationsConfig to { AnisearchCrawler(metaDataProviderConfig = AnisearchRelationsConfig) },
+            KitsuConfig to { KitsuCrawler.instance },
+            LivechartConfig to { LivechartCrawler.instance },
+            MyanimelistConfig to { MyanimelistCrawler.instance },
+            SimklConfig to { SimklCrawler.instance },
+        ).filterNot { (metaDataProviderConfig, _) -> appConfig.isDeactivated(metaDataProviderConfig) }
+            .map { (_, crawler) -> launch { crawler().start() } }
+            .joinAll()
+    }
 
     rawFileConversionService.waitForAllRawFilesToBeConverted()
     rawFileConversionService.shutdown()
+
+    // Before stopping the container, since destroying a session is itself a request to it. A crashed run
+    // leaks its sessions instead; they die with the container whenever it is next restarted.
+    destroyFlaresolverrSessions()
+    stopFlaresolverr(flaresolverrContainerId)
 
     DefaultDownloadControlStateUpdater.instance.updateAll()
     DefaultDownloadControlStateAccessor.instance.allAnime()
@@ -64,7 +138,7 @@ fun main() = runCoroutine {
 
     listOf(
         NoLockFilesLeftValidationPostProcessor.instance,
-        DownloadControlStateWeeksValidationPostProcessor.instance,
+        DownloadControlStateWeeksValidationPostProcessor(appConfig = appConfig),
         StudiosAndProducersExtractionChecker.instance,
         DuplicatesValidationPostProcessor.instance,
         ZstandardFilesForDeadEntriesCreatorPostProcessor.instance,
@@ -75,6 +149,10 @@ fun main() = runCoroutine {
         DeleteOldDownloadDirectoriesPostProcessor.instance,
         ReleaseInfoFileCreatorPostProcessor.instance
     ).forEach { it.process() }
+
+    // The shutdown hook still restores the network, it just stays quiet about it now that this was a
+    // completed run rather than an interruption.
+    completedNormally.set(true)
 }
 
 @KoverIgnore

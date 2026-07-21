@@ -120,7 +120,7 @@ object Analyzer {
     }
 
     private suspend fun checkMergeLocks() {
-        print("\nSelect cluster [any number]: ")
+        print("\nSelect number of sources (cluster size) [any number]: ")
 
         val cluster = waitForUserInput()
 
@@ -201,6 +201,12 @@ object Analyzer {
 
         AnsiTable.instance.printTable(diffTableEntries(currentEntry))
 
+        if (currentEntryUris.size == 1) {
+            println("\n[keep] (= same anime, merge/lock these providers together)    [paste a valid URL] (= add a source to the group)    [check] (= unique anime, never merge with other providers)    [skip] (= decide later)    [exit] (= back to main menu)")
+        } else {
+            println("\n[keep] (= same anime, merge/lock these providers together)    [paste a valid URL] (= add a source to the group)    [skip] (= decide later)    [exit] (= back to main menu)")
+        }
+
         print("\nOption: ")
         val input = waitForUserInput()
         val cleanedUpUrl = toCleanedUpUrl(input)
@@ -236,7 +242,7 @@ object Analyzer {
     }
 
     private suspend fun extendExistingMergeLock(urlToBeAdded: String? = null) {
-        println("[a valid URL] (= URL to be added to merge lock)    [exit] (= back to main menu)")
+        println("[paste a valid URL] (= URL to be added to merge lock)    [exit] (= back to main menu)")
         print("URL to be added: ")
 
         val urlToBeAddedUserInput = urlToBeAdded ?: waitForUserInput()
@@ -245,7 +251,7 @@ object Analyzer {
         when {
             urlToBeAddedUserInput == "exit" -> mainMenu()
             cleanedUpUrlToBeAddedUserInput.second != null && isValidUrl(cleanedUpUrlToBeAddedUserInput.second!!) -> {
-                println("\n[a valid URL] (= Any URL of an existing merge lock)    [exit] (= back to main menu)")
+                println("\n[paste a valid URL] (= Any URL of an existing merge lock)    [exit] (= back to main menu)")
                 print("Any URL from the existing merge lock: ")
 
                 val mergeLockUrlUserInput = waitForUserInput()
@@ -263,6 +269,7 @@ object Analyzer {
                                 }
 
                                 println("\n${Json.toJson(newMergeLock.toList().sorted())}")
+                                println(clickableLinks(newMergeLock.toList().sorted()))
                                 println("\n[keep] (= add merge lock as is)    [exit] (= back to main menu)")
                                 print("Select: ")
 
@@ -287,8 +294,9 @@ object Analyzer {
     }
 
     private suspend fun createNewMergeLockFromScratch(sourcesOfCurrentEntry: Set<URI>): Set<URI> {
-        println("[keep] (= add merge lock as is)    [a valid URL] (= add URL to merge lock)    [exit] (= back to main menu)")
+        println("[keep] (= add merge lock as is)    [paste a valid URL] (= add URL to merge lock)    [exit] (= back to main menu)")
         println("\n${Json.toJson(sourcesOfCurrentEntry)}")
+        clickableLinks(sourcesOfCurrentEntry.toList()).takeIf { it.isNotEmpty() }?.let { println(it) }
 
         print("\nSelect: ")
         val input = waitForUserInput()
@@ -308,6 +316,7 @@ object Analyzer {
         Reprocessor.reprocess()
         datasetEntries.clear()
         populateInMemoryDataset()
+        println("\nReprocessing merging complete. Dataset rewritten with ${datasetEntries.size} entries.")
     }
 
     private suspend fun populateInMemoryDataset() {

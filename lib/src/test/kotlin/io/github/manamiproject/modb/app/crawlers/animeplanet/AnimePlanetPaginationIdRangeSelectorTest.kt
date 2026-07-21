@@ -49,7 +49,51 @@ internal class AnimePlanetPaginationIdRangeSelectorTest {
             }
 
             // then
-            assertThat(result).hasMessage("Unable to locate entries on page.")
+            assertThat(result).hasMessage("Unable to locate entries on page. Neither the card layout nor the table layout matched, which means anime-planet's HTML changed again.")
+        }
+
+        @Test
+        fun `correctly extracts anime IDs from the table layout`() {
+            runTest {
+                // given
+                // anime-planet serves the same listing either as a card grid or as a table, and which one
+                // arrives is not reliably controlled by the request: the bvm=list parameter that selects it
+                // is dropped on the redirect to www, and the host header meant to avoid that redirect is
+                // ignored by FlareSolverr. A live crawl hit the table layout and crashed on 2026-07-17.
+                val testHttpClient = object: HttpClient by TestHttpClient {
+                    override suspend fun get(url: URL, headers: Map<String, Collection<String>>): HttpResponse = HttpResponse(
+                        code = 200,
+                        body = loadTestResource<ByteArray>("crawler/animeplanet/AnimePlanetPaginationIdRangeSelectorTest/page-table-layout.html"),
+                    )
+                }
+
+                val testDownloadControlStateScheduler = object: DownloadControlStateScheduler by TestDownloadControlStateScheduler {
+                    override suspend fun findEntriesNotScheduledForCurrentWeek(metaDataProviderConfig: MetaDataProviderConfig): Set<AnimeId> = emptySet()
+                }
+
+                val testAlreadyDownloadedIdsFinder = object: AlreadyDownloadedIdsFinder by TestAlreadyDownloadedIdsFinder {
+                    override suspend fun alreadyDownloadedIds(metaDataProviderConfig: MetaDataProviderConfig): Set<AnimeId> = emptySet()
+                }
+
+                val animePlanetPaginationIdRangeSelector = AnimePlanetPaginationIdRangeSelector(
+                    httpClient = testHttpClient,
+                    downloadControlStateScheduler = testDownloadControlStateScheduler,
+                    alreadyDownloadedIdsFinder = testAlreadyDownloadedIdsFinder,
+                )
+
+                // when
+                val result = animePlanetPaginationIdRangeSelector.idDownloadList(1)
+
+                // then
+                // The /anime/years/... links in each row's year column must not be mistaken for entries.
+                assertThat(result).containsExactlyInAnyOrder(
+                    "00-08",
+                    "001",
+                    "009-1",
+                    "009-1-rb",
+                    "009-re-cyborg",
+                )
+            }
         }
 
         @Test

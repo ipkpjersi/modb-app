@@ -59,7 +59,7 @@ public class AnimenewsnetworkAnimeConverter(
             "relatedAnime" to "//div[@id='infotype-related']//a/@href",
             "duration" to "//div[@id='infotype-4']//span/text()",
             "year_list_all" to "//div[@id='infotype-7']//div//text()",
-        ))
+        ), identifier = metaDataProviderConfig.hostname())
 
         val japaneseCompanies = rawContent.substringAfter("<nobr>Japanese companies</nobr>")
             .substringBefore("<nobr>")
@@ -67,7 +67,7 @@ public class AnimenewsnetworkAnimeConverter(
         val productionData = extractor.extract(japaneseCompanies, mapOf(
             "studios" to "//b[text()='Animation Production']/following-sibling::a/text()",
             "producers" to "//b[text()='Production']/following-sibling::a/text()",
-        ))
+        ), identifier = metaDataProviderConfig.hostname())
 
         val extractedTitle = extractTitle(data)
 

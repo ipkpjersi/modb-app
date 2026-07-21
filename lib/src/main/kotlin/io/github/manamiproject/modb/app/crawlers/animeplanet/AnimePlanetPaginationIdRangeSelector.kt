@@ -6,6 +6,7 @@ import io.github.manamiproject.modb.app.crawlers.PaginationIdRangeSelector
 import io.github.manamiproject.modb.app.downloadcontrolstate.DefaultDownloadControlStateScheduler
 import io.github.manamiproject.modb.app.downloadcontrolstate.DownloadControlStateScheduler
 import io.github.manamiproject.modb.app.extensions.checkedBody
+import io.github.manamiproject.modb.app.network.FlaresolverrHttpClient
 import io.github.manamiproject.modb.app.network.SuspendableHttpClient
 import io.github.manamiproject.modb.core.config.AnimeId
 import io.github.manamiproject.modb.core.config.MetaDataProviderConfig
@@ -36,7 +37,7 @@ import kotlin.time.toDuration
  */
 class AnimePlanetPaginationIdRangeSelector(
     private val metaDataProviderConfig: MetaDataProviderConfig = AnimePlanetPaginationIdRangeSelectorConfig,
-    private val httpClient: HttpClient = SuspendableHttpClient(),
+    private val httpClient: HttpClient = SuspendableHttpClient(httpClient = FlaresolverrHttpClient()),
     private val extractor: DataExtractor = XmlDataExtractor,
     private val downloadControlStateScheduler: DownloadControlStateScheduler = DefaultDownloadControlStateScheduler.instance,
     private val alreadyDownloadedIdsFinder: AlreadyDownloadedIdsFinder = DefaultAlreadyDownloadedIdsFinder.instance,
@@ -58,15 +59,22 @@ class AnimePlanetPaginationIdRangeSelector(
             headers = mapOf("host" to listOf("www.${metaDataProviderConfig.hostname()}")),
         ).checkedBody(this::class)
 
+        // anime-planet renders this listing in two different layouts holding the same 35 entries: a card grid
+        // (li[data-type=anime]) and a table (td[class=tableTitle]). Which one is served cannot be relied on:
+        // the `bvm=list` parameter that selects it is dropped when the bare domain redirects to www, and the
+        // `host` header this crawler sends to avoid that redirect is ignored by FlareSolverr. So accept
+        // either layout instead of assuming one - the selectors are unambiguous, each matching exactly one
+        // layout and never the other.
         val data = extractor.extract(response, mapOf(
-            "entriesOnThePage" to "//li[@data-type='anime']/a/@href",
+            "entriesAsCards" to "//li[@data-type='anime']/a/@href",
+            "entriesAsTableRows" to "//td[@class='tableTitle']/a/@href",
         ))
 
-        if (data.notFound("entriesOnThePage")) {
-            throw IllegalStateException("Unable to locate entries on page.")
+        val entriesOnThePage = when {
+            !data.notFound("entriesAsCards") -> data.listNotNull<String>("entriesAsCards")
+            !data.notFound("entriesAsTableRows") -> data.listNotNull<String>("entriesAsTableRows")
+            else -> throw IllegalStateException("Unable to locate entries on page. Neither the card layout nor the table layout matched, which means anime-planet's HTML changed again.")
         }
-
-        val entriesOnThePage = data.listNotNull<String>("entriesOnThePage")
             .filterNot { it.startsWith("/anime/years/") }
             .map { it.remove("/anime/") }
             .toHashSet()
@@ -79,7 +87,7 @@ class AnimePlanetPaginationIdRangeSelector(
     @KoverIgnore
     private suspend fun wait() {
         excludeFromTestContext(metaDataProviderConfig) {
-            delay(random(1000, 1200).toDuration(MILLISECONDS))
+            delay(random(1000, 2000).toDuration(MILLISECONDS))
         }
     }
 

@@ -21,6 +21,7 @@ import io.github.manamiproject.modb.app.network.NetworkController
 import io.github.manamiproject.modb.core.config.AnimeId
 import io.github.manamiproject.modb.core.config.ConfigRegistry
 import io.github.manamiproject.modb.core.config.FileSuffix
+import io.github.manamiproject.modb.core.config.Hostname
 import io.github.manamiproject.modb.core.config.MetaDataProviderConfig
 import io.github.manamiproject.modb.core.converter.PathAnimeConverter
 import io.github.manamiproject.modb.core.downloader.Downloader
@@ -94,8 +95,11 @@ internal object TestAppConfig: Config {
     override fun downloadControlStateDirectory(): Directory = shouldNotBeInvoked()
     override fun downloadsDirectory(): Directory = shouldNotBeInvoked()
     override fun metaDataProviderConfigurations(): Set<MetaDataProviderConfig> = shouldNotBeInvoked()
+    override fun deactivatedMetaDataProviders(): Set<Hostname> = shouldNotBeInvoked()
     override fun clock(): Clock = shouldNotBeInvoked()
     override fun canChangeAnimeIds(metaDataProviderConfig: MetaDataProviderConfig): Boolean = shouldNotBeInvoked()
+    override fun networkInterface(): String = shouldNotBeInvoked()
+    override fun ipv6Prefix(): String = shouldNotBeInvoked()
 }
 
 internal object TestPathAnimeConverter: PathAnimeConverter {

@@ -9,8 +9,14 @@ import io.github.manamiproject.modb.core.httpclient.HttpProtocol.HTTP_1_1
 import io.github.manamiproject.modb.test.*
 import kotlinx.coroutines.test.runTest
 import okhttp3.*
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.Protocol.HTTP_2
+import okhttp3.ResponseBody.Companion.toResponseBody
+import okio.Buffer
+import okio.BufferedSource
+import okio.Source
 import okio.Timeout
+import okio.buffer
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.assertThrows
@@ -18,12 +24,46 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import java.net.SocketTimeoutException
 import java.net.URI
+import java.net.URL
 import java.net.UnknownHostException
 import java.util.concurrent.TimeUnit.MILLISECONDS
 import java.util.concurrent.TimeUnit.SECONDS
 import kotlin.reflect.KClass
 import kotlin.test.Test
 
+
+private fun fakeCall(block: () -> Response): Call = object : Call {
+    override fun cancel() = shouldNotBeInvoked()
+    override fun clone(): Call = shouldNotBeInvoked()
+    override fun enqueue(responseCallback: Callback) = shouldNotBeInvoked()
+    override fun isCanceled(): Boolean = shouldNotBeInvoked()
+    override fun isExecuted(): Boolean = shouldNotBeInvoked()
+    override fun request(): Request = shouldNotBeInvoked()
+    override fun timeout(): Timeout = shouldNotBeInvoked()
+    override fun <T : Any> tag(type: KClass<T>): T = shouldNotBeInvoked()
+    override fun <T> tag(type: Class<out T>): T = shouldNotBeInvoked()
+    override fun <T : Any> tag(type: KClass<T>, computeIfAbsent: () -> T): T = shouldNotBeInvoked()
+    override fun <T : Any> tag(type: Class<T>, computeIfAbsent: () -> T): T = shouldNotBeInvoked()
+    override fun execute(): Response = block()
+}
+
+// A 200 response whose headers are fine but whose body throws a SocketTimeoutException while being read,
+// i.e. the timeout happens while streaming the response body rather than during connect/header exchange.
+private fun responseWithBodyThatTimesOutOnRead(url: URL): Response = Response.Builder()
+    .protocol(Protocol.HTTP_1_1)
+    .message(EMPTY)
+    .request(Request.Builder().url(url).build())
+    .code(200)
+    .body(object : ResponseBody() {
+        override fun contentType(): MediaType? = null
+        override fun contentLength(): Long = -1L
+        override fun source(): BufferedSource = object : Source {
+            override fun read(sink: Buffer, byteCount: Long): Long = throw SocketTimeoutException("timeout")
+            override fun timeout(): Timeout = Timeout.NONE
+            override fun close() {}
+        }.buffer()
+    })
+    .build()
 
 internal class DefaultHttpClientKtTest : MockServerTestCase<WireMockServer> by WireMockServerCreator() {
 
@@ -477,6 +517,74 @@ internal class DefaultHttpClientKtTest : MockServerTestCase<WireMockServer> by W
                     "Read timed out",
                     "timeout",
                 )
+            }
+        }
+
+        @Test
+        fun `throwable - performs a retry for a SocketTimeoutException that occurs while reading the response body`() {
+            runTest {
+                // given
+                val url = URI("http://localhost:$port/anime/1535").toURL()
+                var currentAttempt = 0
+                val testOkHttpClient = Call.Factory {
+                    currentAttempt++
+                    when (currentAttempt) {
+                        // First attempt: 200 received, but reading the body throws a SocketTimeoutException.
+                        1 -> fakeCall { responseWithBodyThatTimesOutOnRead(url) }
+                        // Retry: a normal, readable body.
+                        else -> fakeCall {
+                            Response.Builder()
+                                .protocol(Protocol.HTTP_1_1)
+                                .message(EMPTY)
+                                .request(Request.Builder().url(url).build())
+                                .code(200)
+                                .body("Success".toResponseBody("text/plain".toMediaTypeOrNull()))
+                                .build()
+                        }
+                    }
+                }
+
+                val client = DefaultHttpClient(
+                    okhttpClient = testOkHttpClient,
+                    isTestContext = true,
+                )
+
+                // when
+                val result = client.get(url)
+
+                // then
+                assertThat(result.code).isEqualTo(200)
+                assertThat(result.bodyAsString()).isEqualTo("Success")
+            }
+        }
+
+        @Test
+        fun `throwable - with bufferResponseBody set to false a body read timeout is not retried but surfaces when the body is read`() {
+            runTest {
+                // given
+                val url = URI("http://localhost:$port/anime/1535").toURL()
+                var invocations = 0
+                val testOkHttpClient = Call.Factory {
+                    invocations++
+                    fakeCall { responseWithBodyThatTimesOutOnRead(url) }
+                }
+
+                val client = DefaultHttpClient(
+                    okhttpClient = testOkHttpClient,
+                    isTestContext = true,
+                    bufferResponseBody = false,
+                )
+
+                // when
+                val response = client.get(url)
+
+                // then - a streaming client returns the 200 response without touching the body, so the
+                // request runs only once and the timeout surfaces only when the caller reads the body.
+                assertThat(response.code).isEqualTo(200)
+                assertThat(invocations).isEqualTo(1)
+                exceptionExpected<SocketTimeoutException> {
+                    response.bodyAsString()
+                }
             }
         }
 

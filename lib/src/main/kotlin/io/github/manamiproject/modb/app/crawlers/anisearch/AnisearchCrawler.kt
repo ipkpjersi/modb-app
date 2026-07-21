@@ -13,7 +13,7 @@ import io.github.manamiproject.modb.app.downloadcontrolstate.DownloadControlStat
 import io.github.manamiproject.modb.app.downloadcontrolstate.DownloadControlStateScheduler
 import io.github.manamiproject.modb.app.network.LinuxNetworkController
 import io.github.manamiproject.modb.app.network.NetworkController
-import io.github.manamiproject.modb.app.network.SuspendableHttpClient
+import io.github.manamiproject.modb.app.network.tunnelAwareHttpClient
 import io.github.manamiproject.modb.core.config.AnimeId
 import io.github.manamiproject.modb.core.config.MetaDataProviderConfig
 import io.github.manamiproject.modb.core.coverage.KoverIgnore
@@ -60,7 +60,7 @@ class AnisearchCrawler(
     private val lastPageDetector: HighestIdDetector = AnisearchLastPageDetector.instance,
     private val paginationIdRangeSelector: PaginationIdRangeSelector<Int> = AnisearchPaginationIdRangeSelector(metaDataProviderConfig = metaDataProviderConfig),
     private val alreadyDownloadedIdsFinder: AlreadyDownloadedIdsFinder = DefaultAlreadyDownloadedIdsFinder.instance,
-    private val httpClient: HttpClient = SuspendableHttpClient(),
+    private val httpClient: HttpClient = tunnelAwareHttpClient(metaDataProviderConfig.hostname()),
     private val downloader: Downloader = AnisearchDownloader(
         metaDataProviderConfig = metaDataProviderConfig,
         httpClient = httpClient,
@@ -139,7 +139,13 @@ class AnisearchCrawler(
     @KoverIgnore
     private suspend fun wait() {
         excludeFromTestContext(metaDataProviderConfig) {
-            delay(random(2000, 3000).toDuration(MILLISECONDS))
+            // anisearch appears to allow about 10 requests per minute before banning the source IP. The
+            // previous 4000-7000 range averaged ~11 req/min, which burned the residential IP. This range
+            // averages ~5 req/min and never exceeds 8, staying well under that limit with headroom.
+            // Hard floor: never drop below the 7500 ms minimum. 7500 ms between requests is 8 requests per
+            // 60s (8 req/min); going faster is what got the residential IP banned before, and nothing else
+            // here throttles the rate.
+            delay(random(7500, 12500).toDuration(MILLISECONDS))
         }
     }
 

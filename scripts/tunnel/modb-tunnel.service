@@ -1,0 +1,62 @@
+# systemd unit - runs on the RESIDENTIAL (home) machine, NOT on the crawl server.
+#
+# Holds up the reverse SSH tunnel: home dials out to the crawl server and asks it to listen on
+# <bind>:1080, forwarding anything sent there back to the local Dante SOCKS daemon (see sockd.conf).
+#
+# The direction matters. Home is the SSH client, so no inbound port is opened here and the crawl server
+# gets no credentials for this machine. autossh only re-establishes the same outbound connection.
+#
+# Install:
+#   sudo apt install autossh
+#   ssh-keygen -t ed25519 -f ~/.ssh/modb_tunnel -C modb-tunnel
+#   ssh-copy-id -i ~/.ssh/modb_tunnel.pub modb-tunnel@SERVER_HOST
+#   # replace the placeholders below, then:
+#   sudo cp modb-tunnel.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now modb-tunnel
+#
+# Placeholders to replace:
+#   HOME_USER   - the local user on this machine that owns the key
+#   SERVER_USER - the restricted account on the crawl server (see README.md)
+#   SERVER_HOST - the crawl server's hostname or IP
+#   SERVER_PORT - the crawl server's sshd port (check 'Port' in its sshd_config;
+#                 it is not necessarily 22)
+#
+# The bind address 172.17.0.1 is the crawl server's docker bridge gateway, which is what makes the tunnel
+# reachable from the FlareSolverr container. It requires 'GatewayPorts clientspecified' on the server's
+# sshd (see README.md). It is a private bridge address and is not routable from the internet.
+
+[Unit]
+Description=modb reverse SSH tunnel (residential exit IP for datacenter-banned providers)
+After=network-online.target danted.service
+Wants=network-online.target
+
+[Service]
+User=HOME_USER
+
+# -M 0 disables autossh's own monitoring port; ServerAliveInterval below does the liveness check instead,
+# which is the recommended setup and avoids opening extra ports.
+Environment=AUTOSSH_GATETIME=0
+
+ExecStart=/usr/bin/autossh -M 0 -N \
+    -p SERVER_PORT \
+    -o ServerAliveInterval=30 \
+    -o ServerAliveCountMax=3 \
+    -o ExitOnForwardFailure=yes \
+    -o StrictHostKeyChecking=accept-new \
+    -o IdentitiesOnly=yes \
+    -i /home/HOME_USER/.ssh/modb_tunnel \
+    -R 172.17.0.1:1080:127.0.0.1:1080 \
+    SERVER_USER@SERVER_HOST
+
+Restart=always
+RestartSec=10
+
+# The tunnel needs no filesystem access beyond its key.
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=read-only
+
+[Install]
+WantedBy=multi-user.target
