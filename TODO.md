@@ -233,13 +233,22 @@ for a challenge and solves it in place, session or not (`anidb/1535` above went 
 reported "Challenge solved!"). If clearance lapses mid-crawl, one entry costs ~19s and the rest stay fast.
 What the retry here covers is the different case of the session itself being *gone*.
 
-## 4. simkl: enumeration is not achievable - DROP/keep permanently skipped
+## 4. simkl: enumeration is dead, but a keyless MAL-driven redirect scrape is viable
 
-**RESOLVED as NOT ACHIEVABLE (2026-07-19). simkl has no reachable way to enumerate its anime IDs by any
-path - scrape or API - so keep it permanently `--skip simkl`** (or leave `simkl.com` in
-`deactivatedMetaDataProviders`). Do not re-investigate from scratch; the three findings below each close a
-different avenue and were verified, not assumed. simkl has had **0 DCS entries** the entire time and is a
-marginal 9th source - the fork db is fine without it, and the effort-to-value is deeply upside-down.
+**UPDATED 2026-07-20: enumeration is still dead, but it turns out enumeration is NOT REQUIRED.** simkl has no
+reachable way to enumerate its anime IDs by any path (scrape or API - the three findings below each close a
+different avenue, verified not assumed). BUT modb is a cross-provider merger that already holds ~30.6k MAL ids,
+so it can invert the problem and resolve each known anime into its simkl entry via simkl's redirect service -
+and that redirect works **keyless** (no `client_id`, verified below), which removes the "killable key" objection
+that was the entire reason this route was previously rejected. So the technical "not achievable" is no longer
+true. What remains is a ToS-spirit judgement call (see the redirect note) plus the engineering, weighed
+against the fact that simkl has had **0 DCS entries** and is a marginal 9th source. Implementation sketch is at
+the end of this item.
+
+**(Earlier verdict, now superseded, kept for context: "RESOLVED as NOT ACHIEVABLE 2026-07-19 - no reachable
+enumeration by any path, keep permanently `--skip simkl`." That was correct about enumeration but wrong to
+conclude simkl is unreachable, because it did not account for driving off modb's own MAL ids with a keyless
+redirect.)**
 
 **Why every path is closed (verified 2026-07-19 from a real residential browser + the API spec):**
 
@@ -261,19 +270,27 @@ marginal 9th source - the fork db is fine without it, and the effort-to-value is
    50/page) that can't be walked to reconstruct the full ~14.5k ID set. The one thing modb needs - complete
    enumeration - the API structurally cannot provide.
 
-**The only technically-viable API pattern collides with the API terms.** modb is a cross-provider merger and
-already holds MAL/AniDB IDs, so it could invert the problem: for each anime it already knows, resolve the Simkl
-entry via the API's lookup-by-external-id (`/search/id?mal=...` / the `/redirect` mapping), sidestepping both
-the dead POST and the missing enumeration endpoint using only documented, ban-free GETs under 10/sec. BUT the
-Simkl API rules forbid modb's exact use: Rule 2 - the catalog/discovery endpoints are "not authorized for use
-in conjunction with other competing services of the same nature if your service or app does not provide Simkl
-login and Sync functionality"; Rule 3 - "Simkl is built for tracking and discovery, not as a CDN for the world's
-metadata." modb is a competing anime DB that redistributes a merged dataset and offers no Simkl login/sync.
-Worse, using the API means explicitly agreeing to those terms to obtain a `client_id` they suspend "without
-warning, no appeal" - so the external-id route would be knowingly violating signed terms from a killable key,
-arguably a worse position than the unauthenticated scrape. Same class of collision as anisearch's Custom
-Interface clause (item 6). => building the API path is a policy decision, not an engineering one; do not
-build it on the crawler's own judgement.
+**The invert-the-problem route works, and it is keyless (verified 2026-07-20).** modb already holds ~30.6k MAL
+ids, so for each anime it knows it resolves the simkl entry via simkl's redirect
+(`GET https://api.simkl.com/redirect?to=simkl&mal=<id>`), sidestepping both the dead POST and the missing
+enumeration endpoint. The docs claim `client_id` is required, but the endpoint does NOT enforce it - tested with
+no key at all:
+
+| MAL id | result (no client_id) |
+| --- | --- |
+| 1 (Cowboy Bebop) | 301 -> `https://simkl.com/anime/37089/cowboy-bebop` |
+| 20 (Naruto) | 301 -> `https://simkl.com/anime/39508/naruto` |
+| 5114 (FMA: Brotherhood) | 301 -> `https://simkl.com/anime/41586/hagane-no-renkinjutsushi` |
+| 2 (does not exist on MAL) | 301 -> bare `https://simkl.com/` (clean miss signal) |
+
+So there is NO key to revoke and NO API terms to sign - the earlier "knowingly violating signed terms from a
+killable key" objection is void. `robots.txt` also allows it: `/anime/` and `/redirect` are not disallowed for
+`*` (only `/search/`, which is unused). What is NOT void is the ToS SPIRIT: Rule 2 (no catalog use by a
+competing tracker without Simkl login+sync) and Rule 3 ("Simkl is built for tracking and discovery, not as a CDN
+for the world's metadata") are general positions that arguably still cover an unauthenticated scrape, and simkl
+could respond by IP-blocking the tunnel. That is a materially reduced risk (no account or key at stake, only the
+tunnel IP that is already dedicated to banned providers) but still a deliberate policy decision, not the
+crawler's own judgement. Same class of collision as anisearch's Custom Interface clause (item 6).
 
 **Historical context (kept for reference).** The block was found 2026-07-17 during the first crawl after the
 tunnel went up - simkl was the only provider producing no files. The earlier read (below) that it was merely
@@ -306,7 +323,32 @@ GET-based pagination route, (b) warm the session with a GET so the POST carried 
 the POST outside FlareSolverr through the tunnel. Finding 1 above kills (b) and (c) - a real browser with valid
 `cf_clearance` already gets an edge 403, so no client-side variant helps. Finding 2 kills (a) - the live page
 won't paginate past the first page even for a human. The API was floated as a ban-free path but finding 3 shows
-it cannot enumerate, and the lookup-by-external-id alternative is barred by the API terms. Nothing left to try.
+it cannot enumerate. The route that DOES work is not pagination at all but the keyless MAL-driven redirect
+resolution above - it never asks simkl to list itself.
+
+**Implementation sketch (if the ToS risk is judged acceptable).**
+- Replace `SimklPaginationIdRangeSelector` (the dead `/ajax/full/anime.php` POST) with a MAL-id-driven resolver.
+  Everything downstream - download, convert, DCS - is unchanged; only ID acquisition changes.
+- Driver ids: read modb's existing myanimelist DCS entries via `DownloadControlStateAccessor` and pull the MAL
+  id from each source URL (~30.6k). simkl is a SEED here - it has 0 DCS entries, so the first run resolves the
+  whole set; later runs only refresh due entries like any other provider.
+- Resolve: `GET https://api.simkl.com/redirect?to=simkl&mal=<id>` with redirect-following DISABLED, read the
+  `Location` header. If it matches `^https://simkl.com/anime/(\d+)/` capture the simkl id (hit); if it is bare
+  `https://simkl.com/` there is no mapping (skip). If the shared http client cannot be told not to follow 301s,
+  add a no-follow variant or inspect the FINAL url after following (a followed miss just loads the homepage once).
+- Fetch + parse: `GET https://simkl.com/anime/<simklId>` (plain HTML, returns 200 via tunnel) into the existing
+  `SimklAnimeConverter`. No FlareSolverr needed - neither the 301 nor this GET hits a Cloudflare challenge; only
+  the abandoned `/ajax` POST did.
+- Routing: simkl is already in `[modb.app.tunnel] providers`, so both calls exit via the residential IP (the
+  datacenter IP is simkl-banned). Two requests per anime (redirect + page).
+- Rate: UNTESTED at volume. No safe rate is known for ~30k+ unauthenticated redirects. Start conservative and
+  DOCUMENT the intended rate next to the delay - same lesson as items 5/6, where a silent speedup deleted an
+  accidental rate limiter and banned the IP. Do not hammer to find the threshold.
+- Test vehicle: `--only simkl` re-enables the config-deactivated simkl and runs ONLY it through the tunnel, so it
+  never touches the other 7 providers' DCS and fail-fast only aborts the simkl run. This is the targeted-run
+  payoff of item 1, and it is cheap this week because last week's full crawl already populated the others.
+- Coverage: only anime with a MAL id that simkl maps get resolved; simkl-only titles are missed. Acceptable for
+  a MAL-centric merger, and better than today's 0 entries.
 
 ## 5. anidb: AntiLeech triggered - the session speedup removed the accidental rate limiter
 

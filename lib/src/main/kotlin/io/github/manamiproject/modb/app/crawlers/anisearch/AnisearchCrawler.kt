@@ -142,6 +142,9 @@ class AnisearchCrawler(
             // anisearch appears to allow about 10 requests per minute before banning the source IP. The
             // previous 4000-7000 range averaged ~11 req/min, which burned the residential IP. This range
             // averages ~5 req/min and never exceeds 8, staying well under that limit with headroom.
+            // Hard floor: never drop below the 7500 ms minimum. 7500 ms between requests is 8 requests per
+            // 60s (8 req/min); going faster is what got the residential IP banned before, and nothing else
+            // here throttles the rate.
             delay(random(7500, 12500).toDuration(MILLISECONDS))
         }
     }
