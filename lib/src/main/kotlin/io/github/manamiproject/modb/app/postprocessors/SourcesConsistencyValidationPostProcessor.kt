@@ -44,6 +44,14 @@ class SourcesConsistencyValidationPostProcessor(
         val sourcesInDcsEntries = downloadControlStateAccessor.allAnime().map { it.sources }.flatten().toSet()
         var result = sourcesInConvFiles - sourcesInDcsEntries
 
+        // The check below only applies to a run which actually crawled during the current week. Files of the
+        // intermediate format are per week staging artifacts below the working directory of the current week,
+        // whereas [*.dcs] files and the dataset are live state. A standalone reprocess, or any run after a week
+        // rollover, legitimately has no files of the intermediate format for the current week, so an empty set is
+        // not a defect, yet it still fails the run here. Falling back to an older week would not work either:
+        // entries legitimately leave the download control state over time, for example when they are removed as
+        // dead entries, so stale files would report sources as missing from [*.dcs] which were in fact deleted on
+        // purpose. That would be a false failure.
         check(sourcesInConvFiles.isNotEmpty()) { "No sources in [*.$CONVERTED_FILE_SUFFIX] files." }
         check(sourcesInDcsEntries.isNotEmpty()) { "No sources in [*.$DOWNLOAD_CONTROL_STATE_FILE_SUFFIX] files." }
         check(result.isEmpty()) { "There are entries existing in [*.$CONVERTED_FILE_SUFFIX] files, but not in [*.$DOWNLOAD_CONTROL_STATE_FILE_SUFFIX]. Affected sources: [${result.joinToString(", ")}]" }
