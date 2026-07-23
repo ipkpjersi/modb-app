@@ -12,7 +12,7 @@
 Each crawler is given a list of anime IDs. Downloading the raw data can lead to a "not found" (removed entry or not
 publicly available). In this case the anime ID is added to the dead entries list of the respective metadata provider if
 supported, the respective DCS file is being removed if one existed before and the source is removed from the merge lock
-file if was part of a merge lock. Otherwise, the raw data is downloaded in the current weeks working directory.
+file if it was part of a merge lock. Otherwise, the raw data is downloaded in the current week's working directory.
 The file system watcher picks up any newly written file. The metadata specific converter then extracts the data
 and writes it to a temporary JSON file alongside the raw file.
 After all crawlers have finished the existing DCS files are updated based on the conv files or new DCS files are
@@ -20,6 +20,11 @@ created if none existed for the anime ID of that metadata provider.
 Both merge lock files and DCS files are then input for the merging process. The dataset files are always overwritten
 with the result of the merging process. So they are basically stateless. The only stateful files are the merge lock file,
 the DCS files as well as the dead entries files.
+The dead entries files are persisted per metadata provider under the output directory's `dead-entries` folder,
+loaded at the start of every run, and subtracted from the candidate IDs of the ID-range crawlers. That is what
+makes a removal stick across runs: deleting the DCS file alone would not, because the ID range selector would
+rediscover the ID and download it again next run. See [Download Control State (DCS)](dcs.md) for how each DCS file stores the provider's
+actual data alongside its re-download schedule.
 After a retention period (default: 1 week) the raw files and the conv files are being deleted.
 
 ![data lifecycle](images/data_lifecycle.png)

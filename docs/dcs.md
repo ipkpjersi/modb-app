@@ -16,6 +16,13 @@ It basically tracks each anime on each metadata provider over time. Based on the
 anime that are already known in the dataset need to be downloaded again for updates. It's important to know that
 anime are not downloaded only once. They are re-downloaded and checked for updates regularly.
 
+Despite the name, a DCS file is not only a scheduler. Each DCS file also stores the anime's converted metadata
+from that provider (title, sources, episodes, tags, scores and so on) next to the scheduling fields. So the DCS
+files are the app's actual data store. The weekly `downloads` directory is transient staging that is pruned after
+the retention period, while the accumulated DCS set is the source of truth. The dataset files are a stateless,
+regenerated view of it: many per-provider DCS records are merged into one entry via the merge locks (see
+[Data lifecycle](data-lifecycle.md) and [Merging](merging.md)).
+
 In the beginning it was possible to run the application once a week. It was possible to download all anime within a day.
 An average week contained a low two-digit number of new anime at max.
 When MAL experienced consecutive weeks of updates with hundreds of new anime, scaling became an issue faster than
