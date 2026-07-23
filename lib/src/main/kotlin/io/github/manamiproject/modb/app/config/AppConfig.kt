@@ -8,7 +8,6 @@ import io.github.manamiproject.modb.anisearch.AnisearchConfig
 import io.github.manamiproject.modb.anisearch.AnisearchRelationsConfig
 import io.github.manamiproject.modb.app.crawlers.animeplanet.AnimePlanetPaginationIdRangeSelectorConfig
 import io.github.manamiproject.modb.app.crawlers.livechart.LivechartPaginationIdRangeSelectorConfig
-import io.github.manamiproject.modb.app.crawlers.simkl.SimklPaginationIdRangeSelectorConfig
 import io.github.manamiproject.modb.core.date.weekOfYear
 import io.github.manamiproject.modb.core.config.ConfigRegistry
 import io.github.manamiproject.modb.core.config.DefaultConfigRegistry
@@ -93,8 +92,7 @@ class AppConfig(
             LivechartConfig,
             LivechartPaginationIdRangeSelectorConfig,
             MyanimelistConfig,
-            SimklConfig,
-            SimklPaginationIdRangeSelectorConfig -> currentWeekWorkingDir().resolve(hostname)
+            SimklConfig -> currentWeekWorkingDir().resolve(hostname)
             AnisearchRelationsConfig -> currentWeekWorkingDir().resolve("$hostname-relations")
             else -> throw IllegalStateException("No working directory mapping for [${metaDataProviderConfig::class.simpleName}]")
         }

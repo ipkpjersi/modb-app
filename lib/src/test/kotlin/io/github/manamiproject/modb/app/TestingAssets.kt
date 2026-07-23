@@ -18,6 +18,8 @@ import io.github.manamiproject.modb.app.merging.ReviewedIsolatedEntriesAccessor
 import io.github.manamiproject.modb.app.merging.lock.MergeLock
 import io.github.manamiproject.modb.app.merging.lock.MergeLockAccessor
 import io.github.manamiproject.modb.app.network.NetworkController
+import io.github.manamiproject.modb.app.crawlers.simkl.SimklMalIdRedirectResolver
+import io.github.manamiproject.modb.app.crawlers.simkl.SimklResolvedMalIdsRepository
 import io.github.manamiproject.modb.core.config.AnimeId
 import io.github.manamiproject.modb.core.config.ConfigRegistry
 import io.github.manamiproject.modb.core.config.FileSuffix
@@ -230,6 +232,15 @@ internal object TestDataExtractor: DataExtractor {
 
 internal object TestIdRangeSelectorInt: IdRangeSelector<Int> {
     override suspend fun idDownloadList(): List<Int> = shouldNotBeInvoked()
+}
+
+internal object TestSimklMalIdRedirectResolver: SimklMalIdRedirectResolver {
+    override suspend fun resolve(malId: AnimeId): AnimeId? = shouldNotBeInvoked()
+}
+
+internal object TestSimklResolvedMalIdsRepository: SimklResolvedMalIdsRepository {
+    override suspend fun loadAll(): Map<AnimeId, AnimeId?> = shouldNotBeInvoked()
+    override suspend fun saveAll(mapping: Map<AnimeId, AnimeId?>) = shouldNotBeInvoked()
 }
 
 @Suppress("unused")

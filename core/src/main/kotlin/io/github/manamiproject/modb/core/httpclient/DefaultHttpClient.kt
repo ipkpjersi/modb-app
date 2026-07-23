@@ -43,6 +43,8 @@ import java.util.concurrent.TimeUnit.*
  * + Executes request again.
  * @since 9.0.0
  * @param proxy **Default** is [NO_PROXY]
+ * @param followRedirects Whether the client follows 3xx redirects. **Default** is `true`. Set to `false` to
+ * receive the redirect response itself (for example to read its `Location` header without following it).
  * @param readTimeoutInSeconds Socket read timeout in seconds applied to the default [okhttpClient]. **Default** is `60`.
  * @property protocols List of supported HTTP protocol versions in the order of preference. Default is `HTTP/2, HTTP/1.1`.
  * @property okhttpClient Instance of the OKHTTP client on which this client is based.
@@ -52,11 +54,12 @@ import java.util.concurrent.TimeUnit.*
 public class DefaultHttpClient(
     proxy: Proxy = NO_PROXY,
     useCustomRedirectInterceptor: Boolean = false,
+    followRedirects: Boolean = true,
     private val protocols: MutableList<HttpProtocol> = mutableListOf(HTTP_2, HTTP_1_1),
     readTimeoutInSeconds: Long = 60L,
     private var okhttpClient: Call.Factory = OkHttpClient.Builder()
-        .followRedirects(!useCustomRedirectInterceptor)
-        .followSslRedirects(!useCustomRedirectInterceptor)
+        .followRedirects(followRedirects && !useCustomRedirectInterceptor)
+        .followSslRedirects(followRedirects && !useCustomRedirectInterceptor)
         .addInterceptor(RedirectInterceptor(useCustomRedirectInterceptor))
         .connectTimeout(5L, SECONDS)
         .protocols(mapHttpProtocols(protocols))
