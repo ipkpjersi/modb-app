@@ -1,9 +1,14 @@
 # Reverse SSH tunnel (residential exit IP)
 
-`anidb.net`, `anime-planet.com`, `simkl.com` and `anisearch.com` ban this host's datacenter IP range
-outright. FlareSolverr solves their Cloudflare challenge but cannot change the exit IP, and IPv6 rotation
-only shuffles addresses within the same datacenter /64. They need traffic to leave via a **residential**
-connection.
+`anime-planet.com`, `simkl.com` and `anisearch.com` ban this host's datacenter IP range outright.
+FlareSolverr solves their Cloudflare challenge but cannot change the exit IP, and IPv6 rotation only shuffles
+addresses within the same datacenter /64. They need traffic to leave via a **residential** connection - this
+tunnel, one home IP.
+
+`anidb.net` is banned too, but it enforces a per-IP daily quota that one home IP cannot beat, so it uses a
+rotating commercial proxy on a separate FlareSolverr container instead. See
+[Commercial rotating proxy (anidb)](#commercial-rotating-proxy-anidb) below. The two paths are mutually
+exclusive: a provider uses the tunnel or the commercial proxy, never both.
 
 ## How it works
 
@@ -14,7 +19,7 @@ connection.
         |                     (home dials out)          ^              ^
         v                                               |              |
    the internet                                  modb-app        FlareSolverr
-   (residential IP)                              (anisearch)     (anidb, anime-planet, simkl)
+   (residential IP)                              (anisearch)     (anime-planet, simkl)
 ```
 
 **Home dials out to the server.** That single fact is what makes this safe:
@@ -35,7 +40,7 @@ or home's own `127.0.0.1:22`. Forwarding to a Dante daemon instead is what makes
 
 FlareSolverr runs in a bridge-network container, where `127.0.0.1` is *the container itself*. A tunnel bound
 to the server's loopback is invisible to it: FlareSolverr would be handed a proxy it cannot reach, and every
-anidb/anime-planet/simkl request would fail with a proxy connection error (it does not fall back to a direct
+anime-planet/simkl request would fail with a proxy connection error (it does not fall back to a direct
 request, so this is a loud failure, not a silent ban). `172.17.0.1` is the docker bridge gateway: reachable
 from both the containers and the host, and **not routable from the internet**.
 
@@ -162,10 +167,10 @@ In `config.toml`:
 enabled = true
 # host = "172.17.0.1"   # docker bridge gateway (default)
 # port = 1080           # default
-# providers = ["anidb.net", "anime-planet.com", "anisearch.com", "simkl.com"]   # default
+# providers = ["anime-planet.com", "anisearch.com", "simkl.com"]   # default (anidb uses the commercial proxy)
 ```
 
-Then remove those four hostnames from `deactivatedMetaDataProviders`. No rebuild needed for either change.
+Then remove those three hostnames from `deactivatedMetaDataProviders`. No rebuild needed for either change.
 
 If the tunnel is down when a run starts and any tunneled provider is active, the run **aborts before the
 sudo prompt** rather than falling back to the banned datacenter IP. A run that does not crawl any tunneled
@@ -196,3 +201,81 @@ provider (for example `--only anilist`) skips the check entirely.
 * **Retries.** The anisearch crawler retries `ConnectException` by restarting the network interface. Once
   tunneled, that error more likely means the tunnel died, and a restart will not fix it (it drops the SSH
   connection and autossh reconnects). Harmless, but the retry is aimed at the wrong failure. See TODO.
+
+## Commercial rotating proxy (anidb)
+
+anidb enforces a **per-IP daily quota** (~100-200 requests/day), not a rate. A single residential exit - the
+tunnel above, which is one home IP - cannot get past that quota, so anidb needs its traffic spread over a
+pool of rotating residential IPs from a commercial provider.
+
+That pool is not shared with the tunnel's FlareSolverr container. anidb gets a **dedicated second FlareSolverr
+container** (default host port `8192`), pointed at the commercial proxy per session. Two reasons:
+
+* **Parallelism.** FlareSolverr serializes on a single browser (`maxConcurrency = 1`). A second container has
+  its own browser, so anidb's heavy initial crawl runs in parallel with the tunneled providers instead of
+  queueing behind them.
+* **Isolation.** If the commercial proxy flakes, only anidb's container is affected.
+
+The tunnel set (`modb.app.tunnel.providers`) and the commercial set (`modb.app.proxy.commercial.providers`)
+are **mutually exclusive** - a provider takes exactly one residential path. A hostname in both aborts the run
+up front. While the commercial proxy is disabled, anidb must be turned off (see step 4), because it cannot run
+on the datacenter IP without getting banned; the run aborts otherwise.
+
+### Auth: whitelist or credentials
+
+Both are supported, selected purely by whether credentials are present:
+
+* **IP whitelisting (preferred):** leave `username`/`password` blank and register this server's IP with the
+  provider. Preferred because anidb rides FlareSolverr, whose headless Chromium is historically awkward about
+  *authenticated* proxies; an authless proxy request just works.
+* **Username/password:** set both. Passed to FlareSolverr's structured proxy fields. Supported, but verify it
+  end to end with `check-commercial-proxy.sh` early, since the browser layer is where proxy auth can fall down.
+
+### Setup
+
+1. **Start the second container** (or let the app start it on the next run - it reuses one already running,
+   matched by published port):
+
+   ```bash
+   sudo docker run -p 127.0.0.1:8192:8191 -d --restart unless-stopped \
+     --name flaresolverr-commercial ghcr.io/flaresolverr/flaresolverr:v3.5.0
+   ```
+
+   No proxy settings go on the container - the proxy is passed per session by the app, so this container is
+   identical to the tunnel one except its host port and name.
+
+2. **Configure** `config.toml`. The `url`/`username`/`password` are secret, so they belong only in the
+   gitignored `config.toml`, never in source:
+
+   ```toml
+   [modb.app.proxy.commercial]
+   enabled = true
+   # flaresolverrPort = 8192          # host port of the dedicated container (default)
+   # providers = ["anidb.net"]        # default
+   url = "socks5://gateway.example.com:7000"
+   # username = "..."   # optional - set together with password for auth
+   # password = "..."   # optional - leave both blank for IP whitelisting
+   ```
+
+3. **Verify** before enabling, passing the same proxy values through the environment:
+
+   ```bash
+   COMMERCIAL_PROXY_URL="socks5://gateway.example.com:7000" \
+     ./scripts/tunnel/check-commercial-proxy.sh
+   # add COMMERCIAL_PROXY_USER / COMMERCIAL_PROXY_PASS if the provider needs auth
+   ```
+
+4. **Turn anidb on.** While the commercial proxy is off, keep anidb deactivated via the dedicated global key,
+   so the guard is satisfied and anidb never runs on the datacenter IP:
+
+   ```toml
+   deactivatedCommercialMetaDataProviders = ["anidb.net"]   # anidb off until the pool is ready
+   ```
+
+   A provider listed there does not crawl at all. To run anidb through the pool, enable the proxy (step 2) and
+   remove `anidb.net` from that list. (The general `deactivatedMetaDataProviders` and `--skip anidb` also work
+   as off switches.) No rebuild needed for the config changes.
+
+The run **aborts up front** on a misconfiguration rather than starting anidb against a broken or missing proxy:
+an enabled proxy with a blank `url` or only one of `username`/`password`; a provider in both the tunnel and
+commercial sets; or a commercial provider left active while the proxy is disabled.

@@ -28,6 +28,10 @@ internal class FlaresolverrHttpClient(
     private val appConfig: Config = AppConfig.instance,
     private val flaresolverrConfig: FlaresolverrConfig = FlaresolverrConfig.instance,
     private val tunnelConfig: TunnelConfig = TunnelConfig.instance,
+    private val commercialProxyConfig: CommercialProxyConfig = CommercialProxyConfig.instance,
+    // Which FlareSolverr container this client talks to. Default is the tunnel container; a client for a
+    // commercially-proxied provider is created with the commercial container's port (see flaresolverrHttpClientFor).
+    private val port: Int = flaresolverrConfig.port,
     private val httpClient: HttpClient = DefaultHttpClient(
         // FlareSolverr is allowed up to maxTimeout ms to solve a challenge, so our own socket read timeout must
         // exceed that - otherwise a legitimate slow solve trips a spurious SocketTimeoutException and gets retried
@@ -39,7 +43,15 @@ internal class FlaresolverrHttpClient(
     ),
 ): HttpClient {
 
-    private val flaresolverrUrl: URL = URI("http://localhost:${flaresolverrConfig.port}/v1").toURL()
+    private val flaresolverrUrl: URL = URI("http://localhost:$port/v1").toURL()
+
+    // The session map and browser-serializing semaphore for this client's container. Selected by port so that
+    // every client for the same container shares one session-per-domain and one serialized browser, while the
+    // two containers stay fully independent and can run in parallel.
+    private val endpoint: FlaresolverrEndpoint = when (port) {
+        commercialProxyConfig.flaresolverrPort -> commercialEndpoint
+        else -> defaultEndpoint
+    }
     private val maxTimeout: Int = flaresolverrConfig.maxTimeout
 
     // Hard wall-clock cap on a single FlareSolverr operation, covering both the wait for the semaphore permit and
@@ -95,29 +107,33 @@ internal class FlaresolverrHttpClient(
      * Cloudflare clearance cookie - is per-domain. Sharing one across provider(s) would gain nothing, and
      * each provider re-solving its own challenge once is unavoidable.
      *
-     * Must not be called while holding [flaresolverrSemaphore]: creating a session is itself a FlareSolverr
+     * Must not be called while holding the endpoint's semaphore: creating a session is itself a FlareSolverr
      * call which takes the permit, and the semaphore is not reentrant.
      */
     private suspend fun sessionFor(hostname: Hostname): String {
-        sessions[hostname]?.let { return it }
+        endpoint.sessions[hostname]?.let { return it }
 
         // Double-checked under the lock: several crawlers hit the same provider concurrently (e.g. the anidb
         // crawler and its highest-id detector), and without this they would each create a session, leaking
         // every one but the last.
-        return sessionCreationMutex.withLock {
-            sessions[hostname] ?: createSession(hostname).also { sessions[hostname] = it }
+        return endpoint.sessionCreationMutex.withLock {
+            endpoint.sessions[hostname] ?: createSession(hostname).also { endpoint.sessions[hostname] = it }
         }
     }
 
     /**
      * The `proxy` is set here rather than on each request: a session keeps the proxy it was created with, so
-     * a request carrying only `session` still exits through the tunnel (verified). Setting a proxy on the
+     * a request carrying only `session` still exits through its proxy (verified). Setting a proxy on the
      * [httpClient] below would achieve nothing - that client only ever talks to FlareSolverr on localhost.
+     *
+     * The tunnel and commercial sets are mutually exclusive (enforced by checkCommercialProxy), so at most one
+     * branch matches.
      */
     private suspend fun createSession(hostname: Hostname): String {
-        val proxy = when {
-            tunnelConfig.isTunneled(hostname) -> ""","proxy":{"url":"${tunnelConfig.socksUrl()}"}"""
-            else -> EMPTY
+        val (proxy, via) = when {
+            commercialProxyConfig.isRouted(hostname) -> commercialProxyConfig.proxyJson() to " via the commercial proxy"
+            tunnelConfig.isTunneled(hostname) -> ""","proxy":{"url":"${tunnelConfig.socksUrl()}"}""" to " via the tunnel"
+            else -> EMPTY to EMPTY
         }
 
         val content = execute(
@@ -129,7 +145,7 @@ internal class FlaresolverrHttpClient(
             "Unable to create FlareSolverr session for [$hostname] - status [${content.status}], message [${content.message}]."
         }
 
-        log.info { "Created FlareSolverr session [${content.session}] for [$hostname]${if (proxy.isNotBlank()) " via the tunnel" else EMPTY}." }
+        log.info { "Created FlareSolverr session [${content.session}] for [$hostname]$via." }
 
         return content.session
     }
@@ -178,20 +194,21 @@ internal class FlaresolverrHttpClient(
         }
 
         log.warn { "FlareSolverr session for [$hostname] is gone - [${result.message}]. Creating a new one and retrying once." }
-        sessionCreationMutex.withLock { sessions.remove(hostname) }
+        endpoint.sessionCreationMutex.withLock { endpoint.sessions.remove(hostname) }
 
         return block(sessionFor(hostname))
     }
 
     /**
-     * Performs one FlareSolverr round-trip. Holds [flaresolverrSemaphore] for exactly the duration of the
-     * call, since the container has a single browser and returns HTTP 500 when hit concurrently.
+     * Performs one FlareSolverr round-trip. Holds this endpoint's semaphore for exactly the duration of the
+     * call, since the container has a single browser and returns HTTP 500 when hit concurrently. Each
+     * container has its own semaphore, so the two containers run in parallel.
      *
      * All FlareSolverr traffic must be sent as [APPLICATION_JSON] - any other content type makes FlareSolverr reject
      * the body with "Request parameter 'cmd' is mandatory" (HTTP 500).
      */
     private suspend fun execute(targetUrl: String, body: String): FlaresolverrResponse = withOperationTimeout {
-        flaresolverrSemaphore.withPermit {
+        endpoint.semaphore.withPermit {
             try {
                 val postResponse = httpClient.post(
                     url = flaresolverrUrl,
@@ -213,8 +230,8 @@ internal class FlaresolverrHttpClient(
      * nothing ever restarts.
      */
     internal suspend fun destroySessions() {
-        sessionCreationMutex.withLock {
-            sessions.forEach { (hostname, session) ->
+        endpoint.sessionCreationMutex.withLock {
+            endpoint.sessions.forEach { (hostname, session) ->
                 runCatching {
                     execute(hostname, """{"cmd":"sessions.destroy","session":"$session"}""")
                 }.onSuccess {
@@ -224,7 +241,7 @@ internal class FlaresolverrHttpClient(
                     log.warn { "Unable to destroy FlareSolverr session for [$hostname]: [${it.message}]." }
                 }
             }
-            sessions.clear()
+            endpoint.sessions.clear()
         }
     }
 
@@ -250,32 +267,43 @@ internal class FlaresolverrHttpClient(
         private const val OPERATION_TIMEOUT_BUFFER_MS = 60_000L
 
         /**
-         * Shared across all instances so that access to the single FlareSolverr container is serialized
-         * globally - every crawler creates its own [FlaresolverrHttpClient], but they must not hit FlareSolverr
-         * concurrently. Permit count comes from [FlaresolverrConfig.maxConcurrency].
+         * Per-container shared state, one holder per FlareSolverr container. Static (companion) because every
+         * crawler constructs its own [FlaresolverrHttpClient], yet all clients for the same container must
+         * converge on one session per provider and one serialized browser - otherwise the Cloudflare challenge
+         * is re-solved per crawler, or concurrent requests make the single-browser container return HTTP 500.
+         * Permit count comes from [FlaresolverrConfig.maxConcurrency].
+         *
+         * There are exactly two containers (the tunnel one and the commercial one), so two named holders are
+         * clearer than a map keyed by port. [FlaresolverrHttpClient] selects its holder from its own port.
          */
-        private val flaresolverrSemaphore = Semaphore(FlaresolverrConfig.instance.maxConcurrency)
+        private val defaultEndpoint = FlaresolverrEndpoint(FlaresolverrConfig.instance.maxConcurrency)
+        private val commercialEndpoint = FlaresolverrEndpoint(FlaresolverrConfig.instance.maxConcurrency)
 
         /**
-         * FlareSolverr session per metadata provider hostname, shared across all instances for the same
-         * reason as [flaresolverrSemaphore]: every crawler creates its own [FlaresolverrHttpClient], but a
-         * provider must end up with exactly one session, or the Cloudflare challenge is re-solved per
-         * crawler instead of once.
-         */
-        private val sessions = ConcurrentHashMap<Hostname, String>()
-
-        /**
-         * Guards creation and removal of [sessions]. [ConcurrentHashMap.computeIfAbsent] cannot be used
-         * because creating a session suspends.
-         */
-        private val sessionCreationMutex = Mutex()
-
-        /**
-         * Singleton of [FlaresolverrHttpClient]
+         * Singleton of [FlaresolverrHttpClient] for the default (tunnel) container.
          * @since 1.0.0
          */
         val instance: FlaresolverrHttpClient by lazy { FlaresolverrHttpClient() }
+
+        /**
+         * Singleton of [FlaresolverrHttpClient] bound to the commercial-proxy container. Used to tear down
+         * that container's sessions at the end of a run; the crawlers reach it via [flaresolverrHttpClientFor].
+         * @since 1.15.0
+         */
+        val commercialInstance: FlaresolverrHttpClient by lazy {
+            FlaresolverrHttpClient(port = CommercialProxyConfig.instance.flaresolverrPort)
+        }
     }
+}
+
+/**
+ * Per-container shared state for [FlaresolverrHttpClient]: a browser-serializing semaphore and a
+ * session-per-provider map, plus the mutex guarding session creation and removal.
+ */
+private class FlaresolverrEndpoint(maxConcurrency: Int) {
+    val semaphore = Semaphore(maxConcurrency)
+    val sessions = ConcurrentHashMap<Hostname, String>()
+    val sessionCreationMutex = Mutex()
 }
 
 /**

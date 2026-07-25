@@ -39,7 +39,6 @@ internal class TunnelKtTest {
                 // every tunneled provider is deactivated, so the run has no use for the tunnel
                 val appConfig = testConfig(
                     deactivated = setOf(
-                        "anidb.net",
                         "anime-planet.com",
                         "anisearch.com",
                         "simkl.com",
@@ -75,7 +74,7 @@ internal class TunnelKtTest {
 
                 // then
                 assertThat(result).hasMessageContaining("Reverse SSH tunnel is not reachable")
-                assertThat(result).hasMessageContaining("anidb.net, anime-planet.com, anisearch.com, simkl.com")
+                assertThat(result).hasMessageContaining("anime-planet.com, anisearch.com, simkl.com")
             }
         }
 
@@ -132,6 +131,100 @@ internal class TunnelKtTest {
             }
         }
     }
+
+    @Nested
+    inner class CheckCommercialProxyTests {
+
+        @Test
+        fun `does nothing under test context`() {
+            // given
+            // TestAppConfig reports a test context; an enabled-but-blank-url config would otherwise throw.
+            val commercialProxyConfig = CommercialProxyConfig(commercialRegistry(enabled = true, url = null))
+            val tunnelConfig = TunnelConfig(tunnelRegistry())
+
+            // when
+            checkCommercialProxy(commercialProxyConfig, tunnelConfig, TestAppConfig)
+
+            // then
+            // no exception - skipped entirely under test
+        }
+
+        @Test
+        fun `throws when a provider is in both the tunnel and the commercial set`() {
+            // given
+            val appConfig = testConfig()
+            val commercialProxyConfig = CommercialProxyConfig(commercialRegistry(
+                enabled = true,
+                url = "socks5://gw.example.com:7000",
+                providers = listOf("anidb.net"),
+            ))
+            val tunnelConfig = TunnelConfig(tunnelRegistry(providers = listOf("anidb.net", "anisearch.com")))
+
+            // when
+            val result = exceptionExpected<IllegalStateException> {
+                checkCommercialProxy(commercialProxyConfig, tunnelConfig, appConfig)
+            }
+
+            // then
+            assertThat(result).hasMessageContaining("[anidb.net]")
+            assertThat(result).hasMessageContaining("both the tunnel and the commercial proxy set")
+        }
+
+        @Test
+        fun `throws when a commercial provider is active but the proxy is disabled`() {
+            // given
+            val appConfig = testConfig()
+            val commercialProxyConfig = CommercialProxyConfig(commercialRegistry(
+                enabled = false,
+                providers = listOf("anidb.net"),
+            ))
+            val tunnelConfig = TunnelConfig(tunnelRegistry())
+
+            // when
+            val result = exceptionExpected<IllegalStateException> {
+                checkCommercialProxy(commercialProxyConfig, tunnelConfig, appConfig)
+            }
+
+            // then
+            assertThat(result).hasMessageContaining("[anidb.net]")
+            assertThat(result).hasMessageContaining("commercial proxy is disabled")
+        }
+
+        @Test
+        fun `passes when a commercial provider is deactivated and the proxy is disabled`() {
+            // given
+            val appConfig = testConfig(deactivated = setOf("anidb.net"))
+            val commercialProxyConfig = CommercialProxyConfig(commercialRegistry(
+                enabled = false,
+                providers = listOf("anidb.net"),
+            ))
+            val tunnelConfig = TunnelConfig(tunnelRegistry())
+
+            // when
+            checkCommercialProxy(commercialProxyConfig, tunnelConfig, appConfig)
+
+            // then
+            // no exception - anidb is turned off, so a disabled proxy is fine
+        }
+
+        @Test
+        fun `passes when the proxy is enabled and configured`() {
+            // given
+            val appConfig = testConfig()
+            val commercialProxyConfig = CommercialProxyConfig(commercialRegistry(
+                enabled = true,
+                url = "socks5://gw.example.com:7000",
+                providers = listOf("anidb.net"),
+            ))
+            val tunnelConfig = TunnelConfig(tunnelRegistry(providers = listOf("anisearch.com")))
+
+            // when
+            checkCommercialProxy(commercialProxyConfig, tunnelConfig, appConfig)
+
+            // then
+            // no exception
+        }
+    }
 }
 
 private fun testConfig(deactivated: Set<Hostname> = emptySet()) = object : Config by TestAppConfig {
@@ -154,6 +247,19 @@ private fun tunnelRegistry(
     override fun boolean(key: String): Boolean? = enabled
     override fun string(key: String): String? = host
     override fun int(key: String): Int? = port
+
+    @Suppress("UNCHECKED_CAST")
+    override fun <T : Any> list(key: String): List<T>? = providers as List<T>?
+}
+
+private fun commercialRegistry(
+    enabled: Boolean? = null,
+    providers: List<String>? = null,
+    url: String? = null,
+) = object : ConfigRegistry by TestConfigRegistry {
+    override fun boolean(key: String): Boolean? = enabled
+    override fun int(key: String): Int? = null
+    override fun string(key: String): String? = if (key.endsWith(".url")) url else null
 
     @Suppress("UNCHECKED_CAST")
     override fun <T : Any> list(key: String): List<T>? = providers as List<T>?

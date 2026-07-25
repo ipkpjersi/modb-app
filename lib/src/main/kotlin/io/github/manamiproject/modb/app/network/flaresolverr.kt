@@ -4,9 +4,11 @@ import io.github.manamiproject.kommand.CommandExecutor
 import io.github.manamiproject.kommand.JavaProcessBuilder
 import io.github.manamiproject.modb.core.config.ConfigRegistry
 import io.github.manamiproject.modb.core.config.DefaultConfigRegistry
+import io.github.manamiproject.modb.core.config.Hostname
 import io.github.manamiproject.modb.core.config.IntPropertyDelegate
 import io.github.manamiproject.modb.core.config.StringPropertyDelegate
 import io.github.manamiproject.modb.core.extensions.EMPTY
+import io.github.manamiproject.modb.core.httpclient.HttpClient
 import java.time.Clock
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -97,14 +99,23 @@ fun startFlaresolverr(config: FlaresolverrActionConfig.() -> Unit = { }): String
     // faster and lets the container be managed externally (e.g. kept permanently up on a crawl host). The
     // container is matched by its image so the name doesn't matter. A blank return value signals "reused a
     // pre-existing container" so that stopFlaresolverr leaves it running.
+    // Match by the host-published port, not just by image, because there can be two FlareSolverr containers of
+    // the same image (the tunnel one and the commercial one). A published mapping shows in the ports column as
+    // '127.0.0.1:<port>->8191/tcp', so the ':<port>->' fragment identifies this endpoint's container
+    // unambiguously - the image's inert EXPOSE of a port has no '->' and cannot false-match.
     val existingContainerId = currentConfig.commandExecutor.executeCmd(listOf(
         "docker",
         "ps",
         "--filter",
         "ancestor=$FLARESOLVERR_IMAGE",
         "--format",
-        "{{.ID}}",
+        "{{.ID}} {{.Ports}}",
     )).trim()
+        .lineSequence()
+        .firstOrNull { it.contains(":${currentConfig.port}->") }
+        ?.substringBefore(' ')
+        ?.trim()
+        .orEmpty()
 
     if (existingContainerId.isNotBlank()) {
         return EMPTY
@@ -139,7 +150,27 @@ fun startFlaresolverr(config: FlaresolverrActionConfig.() -> Unit = { }): String
  *
  * @since 1.14.0
  */
-suspend fun destroyFlaresolverrSessions() = FlaresolverrHttpClient.instance.destroySessions()
+suspend fun destroyFlaresolverrSessions() {
+    FlaresolverrHttpClient.instance.destroySessions()
+    if (CommercialProxyConfig.instance.enabled) {
+        FlaresolverrHttpClient.commercialInstance.destroySessions()
+    }
+}
+
+/**
+ * Returns a [FlaresolverrHttpClient] bound to the correct FlareSolverr container for [hostname]: the
+ * commercial-proxy container for a commercially-routed provider, otherwise the default (tunnel) container.
+ *
+ * While the commercial proxy is disabled this always returns the default client, so a provider behaves
+ * exactly as it did before.
+ * @since 1.15.0
+ * @param hostname Hostname of the metadata provider the client will be used for.
+ * @return An [HttpClient] talking to the container that provider's traffic must exit through.
+ */
+fun flaresolverrHttpClientFor(hostname: Hostname): HttpClient = when {
+    CommercialProxyConfig.instance.isRouted(hostname) -> FlaresolverrHttpClient(port = CommercialProxyConfig.instance.flaresolverrPort)
+    else -> FlaresolverrHttpClient()
+}
 
 /**
  * Stops the flaresolverr docker container.

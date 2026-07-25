@@ -90,6 +90,17 @@ interface Config: ContextAware {
     fun isDeactivated(metaDataProviderConfig: MetaDataProviderConfig): Boolean = deactivatedMetaDataProviders().contains(metaDataProviderConfig.hostname())
 
     /**
+     * Hostnames of commercial provider(s) which are turned off for this run. Parallel to
+     * [deactivatedMetaDataProviders] but scoped to provider(s) routed through the commercial proxy (see
+     * [io.github.manamiproject.modb.app.network.CommercialProxyConfig]): it is the dedicated place to disable
+     * them, for example while the commercial proxy is not configured yet. A provider listed here is folded
+     * into the run's deactivated set, so it does not crawl at all.
+     * @since 1.15.0
+     * @return Hostnames of commercial provider(s) which are turned off.
+     */
+    fun deactivatedCommercialMetaDataProviders(): Set<Hostname> = emptySet()
+
+    /**
      * Finds a specific [MetaDataProviderConfig] for a given hostname.
      * @since 1.0.0
      * @param host Hostname of a metadata provider

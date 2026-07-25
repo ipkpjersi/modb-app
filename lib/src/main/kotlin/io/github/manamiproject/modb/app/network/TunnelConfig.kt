@@ -78,7 +78,6 @@ class TunnelConfig(
     val providers: Set<Hostname> by SetPropertyDelegate(
         namespace = CONFIG_NAMESPACE,
         default = setOf(
-            "anidb.net",
             "anime-planet.com",
             "anisearch.com",
             "simkl.com",

@@ -25,7 +25,9 @@ import io.github.manamiproject.modb.app.downloadcontrolstate.DefaultDownloadCont
 import io.github.manamiproject.modb.app.downloadcontrolstate.DefaultDownloadControlStateUpdater
 import io.github.manamiproject.modb.app.extensions.alertDeletedAnimeByTitle
 import io.github.manamiproject.modb.app.fluentapi.*
+import io.github.manamiproject.modb.app.network.CommercialProxyConfig
 import io.github.manamiproject.modb.app.network.LinuxNetworkController
+import io.github.manamiproject.modb.app.network.checkCommercialProxy
 import io.github.manamiproject.modb.app.network.checkTunnel
 import io.github.manamiproject.modb.app.network.destroyFlaresolverrSessions
 import io.github.manamiproject.modb.app.network.startFlaresolverr
@@ -71,12 +73,22 @@ fun main(args: Array<String>) {
 private suspend fun run(deactivatedProviders: Set<Hostname>) {
     // CLI selection overrides config.toml's 'deactivatedMetaDataProviders' for this run. The decorator feeds the
     // same set to both consumers: the crawler filter below and DownloadControlStateWeeksValidationPostProcessor.
-    val appConfig: Config = SelectedProvidersConfig(AppConfig.instance, deactivatedProviders)
+    // Provider(s) turned off because the commercial proxy is off or not yet configured are folded into the
+    // run's deactivated set here, so they neither crawl (avoiding a ban on a provider that needs the pool) nor
+    // trip DownloadControlStateWeeksValidationPostProcessor.
+    val appConfig: Config = SelectedProvidersConfig(
+        AppConfig.instance,
+        deactivatedProviders + AppConfig.instance.deactivatedCommercialMetaDataProviders(),
+    )
 
     // Provider(s) which are IP-banned on this host's datacenter range only work through the reverse SSH tunnel.
     // Verified before the password prompt and before FlareSolverr is started, so a missing tunnel costs
     // nothing, and before any crawler runs, so it can never fall back to the banned direct path unnoticed.
     checkTunnel(appConfig = appConfig)
+
+    // Validate the commercial rotating-proxy config up front (does nothing while disabled), so a misconfigured
+    // run aborts before the password prompt rather than after the crawlers have started.
+    checkCommercialProxy(appConfig = appConfig)
 
     val networkController = LinuxNetworkController.instance
     networkController.sudoPasswordValue = passwordPrompt()
@@ -94,6 +106,15 @@ private suspend fun run(deactivatedProviders: Set<Hostname>) {
         networkController.restore()
     })
     val flaresolverrContainerId = startFlaresolverr()
+
+    // A dedicated second FlareSolverr container for commercially-proxied provider(s) (anidb), so its heavy crawl
+    // runs on a separate browser in parallel with the tunneled provider(s) instead of serializing behind them.
+    // Started only when enabled; startFlaresolverr reuses an already-running container matched by this port.
+    val commercialFlaresolverrContainerId = if (CommercialProxyConfig.instance.enabled) {
+        startFlaresolverr { port = CommercialProxyConfig.instance.flaresolverrPort }
+    } else {
+        EMPTY
+    }
 
     val rawFileConversionService = DefaultRawFileConversionService.instance
     rawFileConversionService.start()
@@ -125,6 +146,7 @@ private suspend fun run(deactivatedProviders: Set<Hostname>) {
     // leaks its sessions instead; they die with the container whenever it is next restarted.
     destroyFlaresolverrSessions()
     stopFlaresolverr(flaresolverrContainerId)
+    stopFlaresolverr(commercialFlaresolverrContainerId)
 
     DefaultDownloadControlStateUpdater.instance.updateAll()
     DefaultDownloadControlStateAccessor.instance.allAnime()

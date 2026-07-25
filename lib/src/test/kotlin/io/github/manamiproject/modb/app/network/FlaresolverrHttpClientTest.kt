@@ -90,7 +90,7 @@ internal class FlaresolverrHttpClientTest {
                 )
 
                 // when
-                flaresolverrHttpClient.get(URI("https://anidb.net/anime/1535").toURL())
+                flaresolverrHttpClient.get(URI("https://anisearch.com/anime/1535").toURL())
 
                 // then
                 // The proxy belongs on the session, not the request: a session keeps the proxy it was created
@@ -117,6 +117,34 @@ internal class FlaresolverrHttpClientTest {
                 // then
                 assertThat(flaresolverr.sessionCreations.single()).isEqualTo("""{"cmd":"sessions.create"}""")
                 assertThat(flaresolverr.requests.single()).doesNotContain("proxy")
+            }
+        }
+
+        @Test
+        fun `creates the session with the commercial proxy for a commercially-routed provider`() {
+            runTest {
+                // given
+                val flaresolverr = FlaresolverrStub()
+                val commercialProxyConfig = CommercialProxyConfig(enabledCommercialRegistry(url = "socks5://gw.example.com:7000"))
+                val flaresolverrHttpClient = FlaresolverrHttpClient(
+                    appConfig = TestAppConfig,
+                    tunnelConfig = TunnelConfig(enabledTunnelRegistry()),
+                    commercialProxyConfig = commercialProxyConfig,
+                    port = commercialProxyConfig.flaresolverrPort,
+                    httpClient = flaresolverr,
+                )
+
+                // when
+                flaresolverrHttpClient.get(URI("https://anidb.net/anime/1535").toURL())
+
+                // then
+                // anidb is in the commercial set (and not the tunnel set), so it exits via the commercial proxy
+                // even with the tunnel enabled.
+                assertThat(flaresolverr.sessionCreations.single())
+                    .isEqualTo("""{"cmd":"sessions.create","proxy":{"url":"socks5://gw.example.com:7000"}}""")
+
+                // Clear the shared commercial-endpoint session map so a later test starts clean.
+                flaresolverrHttpClient.destroySessions()
             }
         }
 
@@ -368,6 +396,17 @@ private open class FlaresolverrStub(private val sessionId: String = "test-sessio
 private fun enabledTunnelRegistry() = object : ConfigRegistry by TestConfigRegistry {
     override fun boolean(key: String): Boolean = true
     override fun string(key: String): String? = null
+    override fun int(key: String): Int? = null
+    override fun <T : Any> list(key: String): List<T>? = null
+}
+
+/**
+ * A [ConfigRegistry] with the commercial proxy switched on and [url] set (no credentials), everything else at
+ * its default - so it routes the default provider (anidb) with just a URL.
+ */
+private fun enabledCommercialRegistry(url: String) = object : ConfigRegistry by TestConfigRegistry {
+    override fun boolean(key: String): Boolean = true
+    override fun string(key: String): String? = if (key.endsWith(".url")) url else null
     override fun int(key: String): Int? = null
     override fun <T : Any> list(key: String): List<T>? = null
 }

@@ -759,6 +759,75 @@ internal class AppConfigTest {
     }
 
     @Nested
+    inner class DeactivatedCommercialMetaDataProvidersTests {
+
+        @Test
+        fun `returns an empty set if the config property is not set`() {
+            // given
+            val testConfigRegistry = object: ConfigRegistry by TestConfigRegistry {
+                override fun <T : Any> list(key: String): List<T>? = null
+            }
+
+            val appConfig = AppConfig(
+                configRegistry = testConfigRegistry,
+            )
+
+            // when
+            val result = appConfig.deactivatedCommercialMetaDataProviders()
+
+            // then
+            assertThat(result).isEmpty()
+        }
+
+        @Test
+        fun `correctly returns the deactivated commercial metadata provider`() {
+            // given
+            val testConfigRegistry = object: ConfigRegistry by TestConfigRegistry {
+                @Suppress("UNCHECKED_CAST")
+                override fun <T : Any> list(key: String): List<T> = listOf(
+                    AnidbConfig.hostname(),
+                ) as List<T>
+            }
+
+            val appConfig = AppConfig(
+                configRegistry = testConfigRegistry,
+            )
+
+            // when
+            val result = appConfig.deactivatedCommercialMetaDataProviders()
+
+            // then
+            assertThat(result).containsExactly(
+                AnidbConfig.hostname(),
+            )
+        }
+
+        @Test
+        fun `throws an exception if a hostname doesn't belong to a known metadata provider`() {
+            // given
+            val testConfigRegistry = object: ConfigRegistry by TestConfigRegistry {
+                @Suppress("UNCHECKED_CAST")
+                override fun <T : Any> list(key: String): List<T> = listOf(
+                    AnidbConfig.hostname(),
+                    "example.org",
+                ) as List<T>
+            }
+
+            val appConfig = AppConfig(
+                configRegistry = testConfigRegistry,
+            )
+
+            // when
+            val result = exceptionExpected<IllegalStateException> {
+                appConfig.deactivatedCommercialMetaDataProviders()
+            }
+
+            // then
+            assertThat(result).hasMessage("Unknown hostnames set by 'deactivatedCommercialMetaDataProviders': [example.org].")
+        }
+    }
+
+    @Nested
     inner class IsDeactivatedTests {
 
         @Test

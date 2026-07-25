@@ -52,7 +52,7 @@ internal class TunnelConfigTest {
         }
 
         @Test
-        fun `default providers are the four which are banned on datacenter IP ranges`() {
+        fun `default providers are the datacenter-banned ones, excluding anidb which uses the commercial proxy`() {
             // given
             val tunnelConfig = TunnelConfig(tunnelRegistry())
 
@@ -61,7 +61,6 @@ internal class TunnelConfigTest {
 
             // then
             assertThat(result).containsExactlyInAnyOrder(
-                "anidb.net",
                 "anime-planet.com",
                 "anisearch.com",
                 "simkl.com",
@@ -78,7 +77,7 @@ internal class TunnelConfigTest {
             val tunnelConfig = TunnelConfig(tunnelRegistry(enabled = false))
 
             // when
-            val result = tunnelConfig.isTunneled("anidb.net")
+            val result = tunnelConfig.isTunneled("anisearch.com")
 
             // then
             assertThat(result).isFalse()
@@ -90,7 +89,7 @@ internal class TunnelConfigTest {
             val tunnelConfig = TunnelConfig(tunnelRegistry(enabled = true))
 
             // when
-            val result = tunnelConfig.isTunneled("anidb.net")
+            val result = tunnelConfig.isTunneled("anisearch.com")
 
             // then
             assertThat(result).isTrue()
@@ -126,7 +125,7 @@ internal class TunnelConfigTest {
             val tunnelConfig = TunnelConfig(tunnelRegistry(enabled = true))
 
             // when
-            val result = tunnelConfig.isTunneled("AniDB.net")
+            val result = tunnelConfig.isTunneled("AniSearch.com")
 
             // then
             assertThat(result).isTrue()

@@ -76,8 +76,9 @@ suspend fun checkTunnel(
     if (!tunnelConfig.enabled || appConfig.isTestContext()) return
 
     // Only the provider(s) actually crawling this run matter. A run which skips every tunneled provider(s) -
-    // for example '--only anilist', or all four still being deactivated - has no use for the tunnel, so a
-    // missing one must not abort it.
+    // for example '--only anilist', or all still being deactivated - has no use for the tunnel, so a missing
+    // one must not abort it. Commercially-routed provider(s) are never in this set (the tunnel and commercial
+    // sets are mutually exclusive), so they cannot demand a tunnel they do not use.
     val activeTunneledProviders = tunnelConfig.providers - appConfig.deactivatedMetaDataProviders()
 
     if (activeTunneledProviders.isEmpty()) {
@@ -111,4 +112,52 @@ suspend fun checkTunnel(
     }
 
     Tunnel.log.info { "Reverse SSH tunnel on [$target] is up. Routing [$active] through it." }
+}
+
+/**
+ * Validates the commercial proxy setup up front, so a misconfigured run aborts before the crawlers start
+ * instead of silently banning a provider that needs the pool. Checks, in order:
+ *
+ * 1. the commercial proxy config itself (a non-blank url when enabled, credentials both-or-neither);
+ * 2. the tunnel and commercial provider sets are mutually exclusive (a provider has one residential path);
+ * 3. no commercial provider is left active while the commercial proxy is disabled - it would fall back to the
+ *    direct datacenter path and get banned.
+ *
+ * Does nothing under test. The deeper check - that the commercial container actually exits through a
+ * non-datacenter IP - is left to `scripts/tunnel/check-commercial-proxy.sh`, run by hand before a crawl.
+ *
+ * @since 1.15.0
+ * @param commercialProxyConfig Configuration of the commercial rotating proxy.
+ * @param tunnelConfig Configuration of the reverse SSH tunnel.
+ * @param appConfig Application specific configuration.
+ * @throws IllegalStateException on any of the failures above.
+ */
+fun checkCommercialProxy(
+    commercialProxyConfig: CommercialProxyConfig = CommercialProxyConfig.instance,
+    tunnelConfig: TunnelConfig = TunnelConfig.instance,
+    appConfig: Config = AppConfig.instance,
+) {
+    if (appConfig.isTestContext()) return
+
+    commercialProxyConfig.validate()
+
+    // The tunnel set and the commercial set are mutually exclusive - a provider has exactly one residential
+    // path. A hostname in both is a configuration error, because the two would fight over its routing.
+    val inBoth = tunnelConfig.providers intersect commercialProxyConfig.providers
+    check(inBoth.isEmpty()) {
+        "Provider(s) [${inBoth.sorted().joinToString(", ")}] are in both the tunnel and the commercial proxy set. A provider must be in only one."
+    }
+
+    // A commercial provider that is still active cannot run without the commercial proxy: it would fall back
+    // to the direct datacenter path and get banned. Fail fast unless the proxy is enabled or the provider is
+    // turned off (deactivatedCommercialMetaDataProviders is already folded into deactivatedMetaDataProviders).
+    val activeCommercial = commercialProxyConfig.providers - appConfig.deactivatedMetaDataProviders()
+    check(commercialProxyConfig.enabled || activeCommercial.isEmpty()) {
+        "Commercial provider(s) [${activeCommercial.sorted().joinToString(", ")}] are active but the commercial proxy is disabled. Enable 'modb.app.proxy.commercial' or deactivate them via 'deactivatedCommercialMetaDataProviders'."
+    }
+
+    if (commercialProxyConfig.enabled) {
+        val routed = commercialProxyConfig.providers.sorted().joinToString(", ")
+        Tunnel.log.info { "Commercial proxy enabled. Routing [$routed] through FlareSolverr on port [${commercialProxyConfig.flaresolverrPort}]." }
+    }
 }

@@ -16,6 +16,10 @@ TUNNEL_HOST="${TUNNEL_HOST:-172.17.0.1}"
 TUNNEL_PORT="${TUNNEL_PORT:-1080}"
 PROXY="socks5h://${TUNNEL_HOST}:${TUNNEL_PORT}"
 FLARESOLVERR_IMAGE_MATCH="flaresolverr"
+# The tunnel container publishes this host port (modb.app.flaresolverr.port). Used to select the tunnel
+# container specifically, since a second FlareSolverr (the commercial-proxy one) may also be running on a
+# different port and does not use the tunnel.
+FLARESOLVERR_PORT="${FLARESOLVERR_PORT:-8191}"
 
 failures=0
 
@@ -67,9 +71,13 @@ for target in $DENY_TARGETS; do
 done
 
 echo "== 4. reachable from the FlareSolverr container =="
-container="$(docker ps --filter "ancestor=${FLARESOLVERR_IMAGE_MATCH}" --format '{{.ID}}' 2>/dev/null | head -1)"
+# Select the tunnel container by its published host port, not just by image: a second FlareSolverr container
+# (the commercial-proxy one, on a different port) may be running, and it does not use the tunnel - probing
+# tunnel reachability from inside it would be meaningless. The published mapping shows in the ports column as
+# '127.0.0.1:8191->8191/tcp', so ':<port>->' identifies the tunnel container unambiguously.
+container="$(docker ps --filter "ancestor=${FLARESOLVERR_IMAGE_MATCH}" --format '{{.ID}} {{.Ports}}' 2>/dev/null | grep ":${FLARESOLVERR_PORT}->" | awk '{print $1}' | head -1)"
 if [ -z "$container" ]; then
-    container="$(docker ps --format '{{.ID}} {{.Image}}' 2>/dev/null | grep -i "$FLARESOLVERR_IMAGE_MATCH" | awk '{print $1}' | head -1)"
+    container="$(docker ps --format '{{.ID}} {{.Image}} {{.Ports}}' 2>/dev/null | grep -i "$FLARESOLVERR_IMAGE_MATCH" | grep ":${FLARESOLVERR_PORT}->" | awk '{print $1}' | head -1)"
 fi
 
 if [ -z "$container" ]; then

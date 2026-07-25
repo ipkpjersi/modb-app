@@ -27,7 +27,7 @@ internal class FlaresolverrKtTest {
                 override var config: CommandLineConfig = CommandLineConfig()
                 override fun executeCmd(command: List<String>): String {
                     invocation.add(command)
-                    return "abc123"
+                    return "abc123 127.0.0.1:8191->8191/tcp"
                 }
             }
 
@@ -46,7 +46,7 @@ internal class FlaresolverrKtTest {
                     "--filter",
                     "ancestor=ghcr.io/flaresolverr/flaresolverr:v3.5.0",
                     "--format",
-                    "{{.ID}}",
+                    "{{.ID}} {{.Ports}}",
                 )
             )
         }
@@ -82,7 +82,7 @@ internal class FlaresolverrKtTest {
                     "--filter",
                     "ancestor=ghcr.io/flaresolverr/flaresolverr:v3.5.0",
                     "--format",
-                    "{{.ID}}",
+                    "{{.ID}} {{.Ports}}",
                 ),
                 listOf(
                     "docker",

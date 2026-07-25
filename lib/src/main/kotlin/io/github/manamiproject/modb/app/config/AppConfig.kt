@@ -68,6 +68,12 @@ class AppConfig(
         default = emptySet(),
     )
 
+    private val deactivatedCommercialMetaDataProviders: Set<Hostname> by SetPropertyDelegate(
+        namespace = CONFIG_NAMESPACE,
+        configRegistry = configRegistry,
+        default = emptySet(),
+    )
+
     override fun downloadsDirectory(): Directory {
         val dir = Path(downloadsDirectory)
         check(dir.directoryExists()) { "Download directory set by 'downloadsDirectory' to [$downloadsDirectory] doesn't exist or is not a directory." }
@@ -135,6 +141,15 @@ class AppConfig(
         check(unknownHostnames.isEmpty()) { "Unknown hostnames set by 'deactivatedMetaDataProviders': [${unknownHostnames.sorted().joinToString(", ")}]." }
 
         return deactivatedMetaDataProviders
+    }
+
+    override fun deactivatedCommercialMetaDataProviders(): Set<Hostname> {
+        val knownHostnames = metaDataProviderConfigurations().map { it.hostname() }.toSet()
+        val unknownHostnames = deactivatedCommercialMetaDataProviders - knownHostnames
+
+        check(unknownHostnames.isEmpty()) { "Unknown hostnames set by 'deactivatedCommercialMetaDataProviders': [${unknownHostnames.sorted().joinToString(", ")}]." }
+
+        return deactivatedCommercialMetaDataProviders
     }
 
     companion object {
