@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+#
+# Block a commit whose MESSAGE contains host-specific or sensitive values.
+#
+# The pre-commit hook scans staged file content and never sees the message, so without this a value
+# pasted into a commit message goes straight into permanent history - and a message is more exposed
+# than file content, being surfaced in git log, the commit list, PR views and notification emails.
+# Rewriting one after the fact needs a rebase and a force push.
+#
+# Note what this still cannot cover: the author and committer identity are stamped onto the commit
+# object from 'git config user.name' and 'user.email', not the message, so no hook sees them.
+#
+# Install: ./scripts/install-hooks.sh
+# Bypass once with:  git commit --no-verify   (skips this and pre-commit)
+# Allow one line forever by putting 'allow-sensitive' in a comment on that line.
+
+set -euo pipefail
+
+message_file="$1"
+
+repo_root="$(git rev-parse --show-toplevel)"
+checker="$repo_root/scripts/check-sensitive.py"
+
+# Never block a commit just because the checker is missing on this branch.
+if [[ ! -x "$checker" ]]; then
+    exit 0
+fi
+
+# Git appends its own '#'-prefixed boilerplate and a status listing of every staged path. Those lines
+# are discarded by git anyway, so scanning them could only ever produce a confusing false positive
+# about a branch name or a file path. Strip them and scan the real message alone.
+scratch="$(mktemp -t commit-msg-scan.XXXXXX)"
+trap 'rm -f "$scratch"' EXIT
+grep -v '^#' "$message_file" > "$scratch" || true
+
+# Report against "commit message" rather than the scratch path, which would mean nothing to the
+# reader. Line numbers still line up with the message because git appends its boilerplate at the end.
+set +e
+output="$(python3 "$checker" "$scratch" 2>&1)"
+status=$?
+set -e
+
+printf '%s\n' "$output" | sed "s|$scratch|commit message|g" >&2
+
+if [[ $status -ne 0 ]]; then
+    echo "" >&2
+    echo "The commit message was NOT discarded - edit it and commit again:" >&2
+    echo "    git commit --edit --file .git/COMMIT_EDITMSG" >&2
+    exit 1
+fi
