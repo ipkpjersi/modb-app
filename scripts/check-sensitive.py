@@ -313,6 +313,8 @@ def main():
     parser.add_argument("--all", action="store_true", help="scan every tracked file instead of the staged diff")
     parser.add_argument("--include-fixtures", action="store_true",
                         help="with --all, also scan src/test/resources (scraped pages, very noisy)")
+    parser.add_argument("--label", metavar="TEXT",
+                        help="describe the scanned input in messages, e.g. 'commit message'")
     parser.add_argument("--show-identity", action="store_true",
                         help="print the addresses and prefixes treated as this host's, then exit")
     args = parser.parse_args()
@@ -347,7 +349,7 @@ def main():
     elif args.files:
         paths_to_check = args.files
         source = file_lines(args.files)
-        scope = "{} file(s)".format(len(args.files))
+        scope = args.label or "{} file(s)".format(len(args.files))
     else:
         paths_to_check = staged_paths()
         source = staged_added_lines()

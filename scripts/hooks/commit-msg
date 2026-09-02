@@ -36,7 +36,7 @@ grep -v '^#' "$message_file" > "$scratch" || true
 # Report against "commit message" rather than the scratch path, which would mean nothing to the
 # reader. Line numbers still line up with the message because git appends its boilerplate at the end.
 set +e
-output="$(python3 "$checker" "$scratch" 2>&1)"
+output="$(python3 "$checker" --label "the commit message" "$scratch" 2>&1)"
 status=$?
 set -e
 
