@@ -384,6 +384,11 @@ gradle-app.setting
 # CUSTOM
 discord-webhook.txt
 
+# Local reference notes kept in the working tree on purpose, never committed. Vendor pricing and
+# feature comparisons go stale within weeks, so they are a decision aid for one purchase rather than
+# project documentation.
+residential-proxy-provider-comparison-for-modb-anidb.md
+
 ### Python ###
 # The helper scripts in scripts/ are Python; the interpreter writes caches next to them.
 # No leading slash, so these match at any depth rather than only in the repository root.
