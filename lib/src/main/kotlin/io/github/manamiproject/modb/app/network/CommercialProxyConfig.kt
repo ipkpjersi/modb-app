@@ -47,8 +47,8 @@ class CommercialProxyConfig(
 
     /**
      * Whether the commercial proxy is in use. While `false` no provider is routed through it, regardless of
-     * [providers], and the second FlareSolverr container is neither started nor required. **Default** is
-     * `false`.
+     * [providersForCommercialProxy], and the second FlareSolverr container is neither started nor
+     * required. **Default** is `false`.
      * @since 1.15.0
      */
     val enabled: Boolean by BooleanPropertyDelegate(
@@ -73,7 +73,7 @@ class CommercialProxyConfig(
      * not listed here keeps the tunnel or the direct path. **Default** is `anidb.net`.
      * @since 1.15.0
      */
-    val providers: Set<Hostname> by SetPropertyDelegate(
+    val providersForCommercialProxy: Set<Hostname> by SetPropertyDelegate(
         namespace = CONFIG_NAMESPACE,
         default = setOf(
             "anidb.net",
@@ -121,7 +121,7 @@ class CommercialProxyConfig(
      * @return `true` if traffic for [hostname] must be routed through the commercial proxy.
      */
     fun isRouted(hostname: Hostname): Boolean =
-        enabled && providers.contains(hostname.lowercase().removePrefix("www."))
+        enabled && providersForCommercialProxy.contains(hostname.lowercase().removePrefix("www."))
 
     /**
      * The `proxy` fragment appended to a FlareSolverr `sessions.create` body, including the leading comma.

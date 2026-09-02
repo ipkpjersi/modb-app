@@ -130,7 +130,7 @@ suspend fun checkTunnel(
     // for example '--only anilist', or all still being deactivated - has no use for the tunnel, so a missing
     // one must not abort it. Commercially-routed provider(s) are never in this set (the tunnel and commercial
     // sets are mutually exclusive), so they cannot demand a tunnel they do not use.
-    val activeTunneledProviders = tunnelConfig.providers - appConfig.deactivatedMetaDataProviders()
+    val activeTunneledProviders = tunnelConfig.providersForTunnel - appConfig.deactivatedMetaDataProviders()
 
     if (activeTunneledProviders.isEmpty()) {
         Tunnel.log.info { "Tunnel is enabled but no tunneled provider(s) are active in this run. Skipping tunnel check." }
@@ -194,7 +194,7 @@ fun checkCommercialProxy(
 
     // The tunnel set and the commercial set are mutually exclusive - a provider has exactly one residential
     // path. A hostname in both is a configuration error, because the two would fight over its routing.
-    val inBoth = tunnelConfig.providers intersect commercialProxyConfig.providers
+    val inBoth = tunnelConfig.providersForTunnel intersect commercialProxyConfig.providersForCommercialProxy
     check(inBoth.isEmpty()) {
         "Provider(s) [${inBoth.sorted().joinToString(", ")}] are in both the tunnel and the commercial proxy set. A provider must be in only one."
     }
@@ -202,13 +202,13 @@ fun checkCommercialProxy(
     // A commercial provider that is still active cannot run without the commercial proxy: it would fall back
     // to the direct datacenter path and get banned. Fail fast unless the proxy is enabled or the provider is
     // turned off (deactivatedCommercialMetaDataProviders is already folded into deactivatedMetaDataProviders).
-    val activeCommercial = commercialProxyConfig.providers - appConfig.deactivatedMetaDataProviders()
+    val activeCommercial = commercialProxyConfig.providersForCommercialProxy - appConfig.deactivatedMetaDataProviders()
     check(commercialProxyConfig.enabled || activeCommercial.isEmpty()) {
         "Commercial provider(s) [${activeCommercial.sorted().joinToString(", ")}] are active but the commercial proxy is disabled. Enable 'modb.app.proxy.commercial' or deactivate them via 'deactivatedCommercialMetaDataProviders'."
     }
 
     if (commercialProxyConfig.enabled) {
-        val routed = commercialProxyConfig.providers.sorted().joinToString(", ")
+        val routed = commercialProxyConfig.providersForCommercialProxy.sorted().joinToString(", ")
         Tunnel.log.info { "Commercial proxy enabled. Routing [$routed] through FlareSolverr on port [${commercialProxyConfig.flaresolverrPort}]." }
     }
 }

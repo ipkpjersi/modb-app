@@ -39,7 +39,7 @@ class TunnelConfig(
 
     /**
      * Whether the tunnel is in use. While `false` no provider is routed through the tunnel, regardless of
-     * [providers]. **Default** is `false` so a host without a tunnel behaves exactly as before.
+     * [providersForTunnel]. **Default** is `false` so a host without a tunnel behaves exactly as before.
      * @since 1.14.0
      */
     val enabled: Boolean by BooleanPropertyDelegate(
@@ -75,7 +75,7 @@ class TunnelConfig(
      * connection's bandwidth.
      * @since 1.14.0
      */
-    val providers: Set<Hostname> by SetPropertyDelegate(
+    val providersForTunnel: Set<Hostname> by SetPropertyDelegate(
         namespace = CONFIG_NAMESPACE,
         default = setOf(
             "anime-planet.com",
@@ -95,7 +95,7 @@ class TunnelConfig(
      * @return `true` if traffic for [hostname] must be routed through the tunnel.
      */
     fun isTunneled(hostname: Hostname): Boolean =
-        enabled && providers.contains(hostname.lowercase().removePrefix("www."))
+        enabled && providersForTunnel.contains(hostname.lowercase().removePrefix("www."))
 
     /**
      * Proxy to use for direct-scrape provider. Returns [NO_PROXY] for anything not routed through the

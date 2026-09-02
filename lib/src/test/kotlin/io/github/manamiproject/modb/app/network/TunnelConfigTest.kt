@@ -57,7 +57,7 @@ internal class TunnelConfigTest {
             val tunnelConfig = TunnelConfig(tunnelRegistry())
 
             // when
-            val result = tunnelConfig.providers
+            val result = tunnelConfig.providersForTunnel
 
             // then
             assertThat(result).containsExactlyInAnyOrder(

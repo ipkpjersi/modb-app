@@ -167,7 +167,7 @@ In `config.toml`:
 enabled = true
 # host = "172.17.0.1"   # docker bridge gateway (default)
 # port = 1080           # default
-# providers = ["anime-planet.com", "anisearch.com", "simkl.com"]   # default (anidb uses the commercial proxy)
+# providersForTunnel = ["anime-planet.com", "anisearch.com", "simkl.com"]   # default (anidb uses the commercial proxy)
 ```
 
 Then remove those three hostnames from `deactivatedMetaDataProviders`. No rebuild needed for either change.
@@ -216,7 +216,8 @@ container** (default host port `8192`), pointed at the commercial proxy per sess
   queueing behind them.
 * **Isolation.** If the commercial proxy flakes, only anidb's container is affected.
 
-The tunnel set (`modb.app.tunnel.providers`) and the commercial set (`modb.app.proxy.commercial.providers`)
+The tunnel set (`modb.app.tunnel.providersForTunnel`) and the commercial set
+(`modb.app.proxy.commercial.providersForCommercialProxy`)
 are **mutually exclusive** - a provider takes exactly one residential path. A hostname in both aborts the run
 up front. While the commercial proxy is disabled, anidb must be turned off (see step 4), because it cannot run
 on the datacenter IP without getting banned; the run aborts otherwise.
@@ -290,7 +291,7 @@ only confirms the container is running, not that the browser can authenticate th
    [modb.app.proxy.commercial]
    enabled = true
    # flaresolverrPort = 8192          # host port of the dedicated container (default)
-   # providers = ["anidb.net"]        # default
+   # providersForCommercialProxy = ["anidb.net"]   # default
    url = "socks5://gateway.example.com:7000"
    # username = "..."   # optional - set together with password for auth
    # password = "..."   # optional - leave both blank for IP whitelisting

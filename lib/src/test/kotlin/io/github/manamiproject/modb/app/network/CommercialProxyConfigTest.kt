@@ -42,7 +42,7 @@ internal class CommercialProxyConfigTest {
             val config = CommercialProxyConfig(commercialRegistry())
 
             // when
-            val result = config.providers
+            val result = config.providersForCommercialProxy
 
             // then
             assertThat(result).containsExactly("anidb.net")
