@@ -2,10 +2,14 @@ package io.github.manamiproject.modb.app.network
 
 import io.github.manamiproject.modb.app.TestAppConfig
 import io.github.manamiproject.modb.app.TestConfigRegistry
+import io.github.manamiproject.modb.app.TestNetworkController
 import io.github.manamiproject.modb.app.config.Config
 import io.github.manamiproject.modb.core.config.ConfigRegistry
 import io.github.manamiproject.modb.core.config.Hostname
 import io.github.manamiproject.modb.test.exceptionExpected
+import io.github.manamiproject.modb.test.shouldNotBeInvoked
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.test.runTest
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Nested
@@ -223,6 +227,131 @@ internal class TunnelKtTest {
 
             // then
             // no exception
+        }
+    }
+
+    @Nested
+    inner class IsRoutedElsewhereTests {
+
+        @Test
+        fun `returns false if neither the tunnel nor the commercial proxy handles the hostname`() {
+            // given
+            val tunnelConfig = TunnelConfig(tunnelRegistry(enabled = true, providers = listOf("anisearch.com")))
+            val commercialProxyConfig = CommercialProxyConfig(commercialRegistry(enabled = true, providers = listOf("anidb.net")))
+
+            // when
+            val result = isRoutedElsewhere("anilist.co", tunnelConfig, commercialProxyConfig)
+
+            // then
+            assertThat(result).isFalse()
+        }
+
+        @Test
+        fun `returns false if the hostname is listed but the route is disabled`() {
+            // given
+            val tunnelConfig = TunnelConfig(tunnelRegistry(providers = listOf("anisearch.com")))
+            val commercialProxyConfig = CommercialProxyConfig(commercialRegistry(providers = listOf("anidb.net")))
+
+            // when / then
+            assertThat(isRoutedElsewhere("anisearch.com", tunnelConfig, commercialProxyConfig)).isFalse()
+            assertThat(isRoutedElsewhere("anidb.net", tunnelConfig, commercialProxyConfig)).isFalse()
+        }
+
+        @Test
+        fun `returns true if the hostname is tunneled`() {
+            // given
+            val tunnelConfig = TunnelConfig(tunnelRegistry(enabled = true, providers = listOf("anisearch.com")))
+            val commercialProxyConfig = CommercialProxyConfig(commercialRegistry())
+
+            // when
+            val result = isRoutedElsewhere("anisearch.com", tunnelConfig, commercialProxyConfig)
+
+            // then
+            assertThat(result).isTrue()
+        }
+
+        @Test
+        fun `returns true if the hostname goes through the commercial proxy`() {
+            // given
+            val tunnelConfig = TunnelConfig(tunnelRegistry())
+            val commercialProxyConfig = CommercialProxyConfig(commercialRegistry(enabled = true, providers = listOf("anidb.net")))
+
+            // when
+            val result = isRoutedElsewhere("anidb.net", tunnelConfig, commercialProxyConfig)
+
+            // then
+            assertThat(result).isTrue()
+        }
+    }
+
+    @Nested
+    inner class RestartUnlessRoutedTests {
+
+        @Test
+        fun `restarts the network controller on the direct path`() {
+            runTest {
+                // given
+                var invocations = 0
+                val testNetworkController = object: NetworkController by TestNetworkController {
+                    override suspend fun restartAsync(): Deferred<Boolean> {
+                        invocations++
+                        return CompletableDeferred(true)
+                    }
+                }
+
+                // when
+                restartUnlessRouted(
+                    hostname = "anilist.co",
+                    networkController = testNetworkController,
+                    tunnelConfig = TunnelConfig(tunnelRegistry(enabled = true, providers = listOf("anisearch.com"))),
+                    commercialProxyConfig = CommercialProxyConfig(commercialRegistry()),
+                ).invoke()
+
+                // then
+                assertThat(invocations).isEqualTo(1)
+            }
+        }
+
+        @Test
+        fun `does nothing if the hostname is tunneled`() {
+            runTest {
+                // given
+                val testNetworkController = object: NetworkController by TestNetworkController {
+                    override suspend fun restartAsync(): Deferred<Boolean> = shouldNotBeInvoked()
+                }
+
+                // when
+                restartUnlessRouted(
+                    hostname = "anisearch.com",
+                    networkController = testNetworkController,
+                    tunnelConfig = TunnelConfig(tunnelRegistry(enabled = true, providers = listOf("anisearch.com"))),
+                    commercialProxyConfig = CommercialProxyConfig(commercialRegistry()),
+                ).invoke()
+
+                // then
+                // the NetworkController would have thrown
+            }
+        }
+
+        @Test
+        fun `does nothing if the hostname goes through the commercial proxy`() {
+            runTest {
+                // given
+                val testNetworkController = object: NetworkController by TestNetworkController {
+                    override suspend fun restartAsync(): Deferred<Boolean> = shouldNotBeInvoked()
+                }
+
+                // when
+                restartUnlessRouted(
+                    hostname = "anidb.net",
+                    networkController = testNetworkController,
+                    tunnelConfig = TunnelConfig(tunnelRegistry()),
+                    commercialProxyConfig = CommercialProxyConfig(commercialRegistry(enabled = true, providers = listOf("anidb.net"))),
+                ).invoke()
+
+                // then
+                // the NetworkController would have thrown
+            }
         }
     }
 }

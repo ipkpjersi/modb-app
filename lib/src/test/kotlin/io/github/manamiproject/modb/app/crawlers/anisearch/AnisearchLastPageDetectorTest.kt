@@ -4,6 +4,7 @@ import io.github.manamiproject.modb.app.TestDataExtractor
 import io.github.manamiproject.modb.app.TestHttpClient
 import io.github.manamiproject.modb.app.TestMetaDataProviderConfig
 import io.github.manamiproject.modb.app.TestNetworkController
+import io.github.manamiproject.modb.app.routableTestMetaDataProviderConfig
 import io.github.manamiproject.modb.app.crawlers.myanimelist.MyanimelistHighestIdDetectorConfig
 import io.github.manamiproject.modb.app.network.NetworkController
 import io.github.manamiproject.modb.core.config.MetaDataProviderConfig
@@ -49,7 +50,7 @@ internal class AnisearchLastPageDetectorTest {
 
                 // when
                 AnisearchLastPageDetector(
-                    metaDataProviderConfig = TestMetaDataProviderConfig,
+                    metaDataProviderConfig = routableTestMetaDataProviderConfig(),
                     httpClient = testHttpClient,
                     networkController = testNetworkController,
                     extractor = TestDataExtractor,

@@ -8,6 +8,7 @@ import io.github.manamiproject.modb.app.downloadcontrolstate.DownloadControlStat
 import io.github.manamiproject.modb.app.extensions.checkedBody
 import io.github.manamiproject.modb.app.network.LinuxNetworkController
 import io.github.manamiproject.modb.app.network.NetworkController
+import io.github.manamiproject.modb.app.network.restartUnlessRouted
 import io.github.manamiproject.modb.app.network.tunnelAwareHttpClient
 import io.github.manamiproject.modb.core.config.AnimeId
 import io.github.manamiproject.modb.core.config.MetaDataProviderConfig
@@ -51,7 +52,10 @@ class AnisearchPaginationIdRangeSelector(
     private val entriesNotScheduledForCurrentWeek = hashSetOf<AnimeId>()
 
     init {
-        val restart = suspend { networkController.restartAsync().join() }
+        val restart = restartUnlessRouted(
+            hostname = metaDataProviderConfig.hostname(),
+            networkController = networkController,
+        )
         httpClient.addRetryCases(ThrowableRetryCase(executeBefore = restart) { it is ConnectException})
         httpClient.addRetryCases(ThrowableRetryCase(executeBefore = restart) { it is UnknownHostException})
         httpClient.addRetryCases(ThrowableRetryCase(executeBefore = restart) { it is NoRouteToHostException})

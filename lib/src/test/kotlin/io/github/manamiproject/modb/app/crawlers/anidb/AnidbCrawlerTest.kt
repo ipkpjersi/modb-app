@@ -8,8 +8,11 @@ import io.github.manamiproject.modb.app.config.Config
 import io.github.manamiproject.modb.app.crawlers.IdRangeSelector
 import io.github.manamiproject.modb.app.crawlers.anidb.AnidbCrawler.Companion.ANIDB_PENDING_FILE_SUFFIX
 import io.github.manamiproject.modb.app.dataset.DeadEntriesAccessor
+import io.github.manamiproject.modb.app.network.CommercialProxyConfig
 import io.github.manamiproject.modb.app.network.NetworkController
+import io.github.manamiproject.modb.app.network.TunnelConfig
 import io.github.manamiproject.modb.core.config.AnimeId
+import io.github.manamiproject.modb.core.config.ConfigRegistry
 import io.github.manamiproject.modb.core.config.MetaDataProviderConfig
 import io.github.manamiproject.modb.core.coroutines.ModbDispatchers.LIMITED_CPU
 import io.github.manamiproject.modb.core.downloader.Downloader
@@ -62,12 +65,14 @@ internal class AnidbCrawlerTest {
                 // when
                 AnidbCrawler(
                     appConfig = TestAppConfig,
-                    metaDataProviderConfig = TestMetaDataProviderConfig,
+                    metaDataProviderConfig = routableTestMetaDataProviderConfig(ROUTED_HOSTNAME),
                     deadEntriesAccess = TestDeadEntriesAccessor,
                     idRangeSelector = TestIdRangeSelectorInt,
                     httpClient = testHttpClient,
                     downloader = TestDownloader,
                     networkController = testNetworkController,
+                    tunnelConfig = TunnelConfig(routingRegistry()),
+                    commercialProxyConfig = CommercialProxyConfig(routingRegistry()),
                 )
 
                 // then
@@ -87,6 +92,81 @@ internal class AnidbCrawlerTest {
                 assertThat(noRouteToHostException).isNotNull()
                 noRouteToHostException!!.executeBefore.invoke()
                 assertThat(restartInvocations).isEqualTo(3)
+            }
+        }
+
+        @Test
+        fun `doesn't restart the NetworkController in the RetryCases if the provider is routed through the tunnel`() {
+            tempDirectory {
+                // given
+                val cases = mutableListOf<RetryCase>()
+                val testHttpClient = object: HttpClient by TestHttpClient {
+                    override fun addRetryCases(vararg retryCases: RetryCase): HttpClient {
+                        cases.addAll(retryCases)
+                        return this
+                    }
+                }
+
+                val testNetworkController = object: NetworkController by TestNetworkController {
+                    override suspend fun restartAsync(): Deferred<Boolean> = shouldNotBeInvoked()
+                }
+
+                // when
+                AnidbCrawler(
+                    appConfig = TestAppConfig,
+                    metaDataProviderConfig = routableTestMetaDataProviderConfig(ROUTED_HOSTNAME),
+                    deadEntriesAccess = TestDeadEntriesAccessor,
+                    idRangeSelector = TestIdRangeSelectorInt,
+                    httpClient = testHttpClient,
+                    downloader = TestDownloader,
+                    networkController = testNetworkController,
+                    tunnelConfig = TunnelConfig(routingRegistry(enabled = true, providers = listOf(ROUTED_HOSTNAME))),
+                    commercialProxyConfig = CommercialProxyConfig(routingRegistry()),
+                )
+
+                // then
+                assertThat(cases).hasSize(3)
+                // The NetworkController would throw if any of them tried to rotate this host's address.
+                assertThatNoException().isThrownBy {
+                    runBlocking { cases.forEach { it.executeBefore.invoke() } }
+                }
+            }
+        }
+
+        @Test
+        fun `doesn't restart the NetworkController in the RetryCases if the provider is routed through the commercial proxy`() {
+            tempDirectory {
+                // given
+                val cases = mutableListOf<RetryCase>()
+                val testHttpClient = object: HttpClient by TestHttpClient {
+                    override fun addRetryCases(vararg retryCases: RetryCase): HttpClient {
+                        cases.addAll(retryCases)
+                        return this
+                    }
+                }
+
+                val testNetworkController = object: NetworkController by TestNetworkController {
+                    override suspend fun restartAsync(): Deferred<Boolean> = shouldNotBeInvoked()
+                }
+
+                // when
+                AnidbCrawler(
+                    appConfig = TestAppConfig,
+                    metaDataProviderConfig = routableTestMetaDataProviderConfig(ROUTED_HOSTNAME),
+                    deadEntriesAccess = TestDeadEntriesAccessor,
+                    idRangeSelector = TestIdRangeSelectorInt,
+                    httpClient = testHttpClient,
+                    downloader = TestDownloader,
+                    networkController = testNetworkController,
+                    tunnelConfig = TunnelConfig(routingRegistry()),
+                    commercialProxyConfig = CommercialProxyConfig(routingRegistry(enabled = true, providers = listOf(ROUTED_HOSTNAME))),
+                )
+
+                // then
+                assertThat(cases).hasSize(3)
+                assertThatNoException().isThrownBy {
+                    runBlocking { cases.forEach { it.executeBefore.invoke() } }
+                }
             }
         }
     }
@@ -430,6 +510,65 @@ internal class AnidbCrawlerTest {
         }
 
         @Test
+        fun `backs off instead of restarting the network controller on a CrawlerDetectedException if the provider is routed`() {
+            tempDirectory {
+                // given
+                val testMetaDataProviderConfig = object: MetaDataProviderConfig by AnidbConfig {
+                    override fun isTestContext(): Boolean = true
+                }
+
+                val testAppConfig = object : Config by TestAppConfig {
+                    override fun workingDir(metaDataProviderConfig: MetaDataProviderConfig): Directory = tempDir
+                }
+
+                val testIdRangeSelector = object: IdRangeSelector<Int> {
+                    override suspend fun idDownloadList(): List<Int> = listOf(1535, 23, 1254, 424)
+                }
+
+                // Rotating this host's address is not a valid recovery while routed, so it must never be called.
+                val testNetworkController = object: NetworkController by TestNetworkController {
+                    override suspend fun restartAsync(): Deferred<Boolean> = shouldNotBeInvoked()
+                }
+
+                var hasThrown = false
+                val successfulEntry = "successfully loaded content for"
+                val testAnimeDownloader = object: Downloader by TestDownloader {
+                    override suspend fun download(id: AnimeId, onDeadEntry: suspend (AnimeId) -> Unit): String {
+                        return if (hasThrown) {
+                            "$successfulEntry $id"
+                        } else {
+                            hasThrown = true
+                            throw CrawlerDetectedException
+                        }
+                    }
+                }
+
+                val crawler = AnidbCrawler(
+                    appConfig = testAppConfig,
+                    metaDataProviderConfig = testMetaDataProviderConfig,
+                    downloader = testAnimeDownloader,
+                    deadEntriesAccess = TestDeadEntriesAccessor,
+                    idRangeSelector = testIdRangeSelector,
+                    networkController = testNetworkController,
+                    tunnelConfig = TunnelConfig(routingRegistry()),
+                    commercialProxyConfig = CommercialProxyConfig(
+                        routingRegistry(enabled = true, providers = listOf(AnidbConfig.hostname())),
+                    ),
+                )
+
+                // when
+                crawler.start()
+
+                // then
+                assertThat(hasThrown).isTrue()
+                testIdRangeSelector.idDownloadList().forEach { id ->
+                    val result = tempDir.resolve("$id.html").readFile()
+                    assertThat(result).isEqualTo("$successfulEntry $id")
+                }
+            }
+        }
+
+        @Test
         fun `throws an exception if a restart of the network controller didn't help`() {
             tempDirectory {
                 // given
@@ -552,4 +691,21 @@ internal class AnidbCrawlerTest {
             }
         }
     }
+}
+
+private const val ROUTED_HOSTNAME = "example.org"
+
+/**
+ * Backs both [TunnelConfig] and [CommercialProxyConfig], which read the same shape: one boolean for `enabled`
+ * and one list for `providers`. `null` means "not configured", so the delegate falls back to its default -
+ * disabled, which is the unrouted direct path.
+ */
+private fun routingRegistry(
+    enabled: Boolean? = null,
+    providers: List<String>? = null,
+) = object : ConfigRegistry by TestConfigRegistry {
+    override fun boolean(key: String): Boolean? = enabled
+
+    @Suppress("UNCHECKED_CAST")
+    override fun <T : Any> list(key: String): List<T>? = providers as List<T>?
 }

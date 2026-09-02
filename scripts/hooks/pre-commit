@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+#
+# Block a commit which introduces host-specific or sensitive values.
+#
+# Scans only the staged added lines, so pre-existing legitimate content (the codecov badge token, the
+# ipkpjersi repo URLs the build and badges depend on) never trips it. See scripts/check-sensitive.py.
+#
+# Install (once per clone - .git/hooks is never version controlled, but this directory is):
+#
+#     git config core.hooksPath scripts/hooks
+#
+# Undo with: git config --unset core.hooksPath
+#
+# Bypass once with:  git commit --no-verify
+# Allow one line forever by putting 'allow-sensitive' in a comment on that line.
+
+set -euo pipefail
+
+repo_root="$(git rev-parse --show-toplevel)"
+checker="$repo_root/scripts/check-sensitive.py"
+
+# Never block a commit just because the checker is missing on this branch.
+if [[ ! -x "$checker" ]]; then
+    exit 0
+fi
+
+exec python3 "$checker"

@@ -223,13 +223,52 @@ on the datacenter IP without getting banned; the run aborts otherwise.
 
 ### Auth: whitelist or credentials
 
-Both are supported, selected purely by whether credentials are present:
+Both are supported, selected purely by whether credentials are present. Which one *works*, though, depends on
+the proxy's scheme rather than on preference. From the FlareSolverr v3.5.0 source (`/app/utils.py`,
+`get_webdriver`):
 
-* **IP whitelisting (preferred):** leave `username`/`password` blank and register this server's IP with the
-  provider. Preferred because anidb rides FlareSolverr, whose headless Chromium is historically awkward about
-  *authenticated* proxies; an authless proxy request just works.
-* **Username/password:** set both. Passed to FlareSolverr's structured proxy fields. Supported, but verify it
-  end to end with `check-commercial-proxy.sh` early, since the browser layer is where proxy auth can fall down.
+* **No credentials** - the URL is handed to Chromium as `--proxy-server=<url>`. Works for both `http://` and
+  `socks5://`. This is how the reverse SSH tunnel already talks to dante.
+* **With credentials** - FlareSolverr generates a throwaway MV3 extension which sets the proxy via
+  `chrome.proxy` `fixed_servers` and answers the challenge from a `chrome.webRequest.onAuthRequired` listener.
+  Proxy auth *is* properly implemented, and FlareSolverr runs under Xvfb rather than true headless, so the
+  extension does load.
+
+The catch is that `onAuthRequired` fires for an HTTP **407 Proxy Authentication Required** response. SOCKS5
+authenticates inside the SOCKS protocol itself (RFC 1929), during the binary handshake at TCP connect time,
+before any HTTP exists. Chromium has never implemented SOCKS5 username/password auth - it only offers the
+"no authentication" method, so a proxy demanding credentials replies `0xFF` ("no acceptable methods") and
+closes the connection. There is no request and no 407 for the listener to attach to.
+
+| | credentials | IP whitelisting |
+| --- | --- | --- |
+| `http(s)://` gateway | works (extension answers the 407) | works |
+| `socks5://` gateway | **fails** - see below | works |
+
+The `socks5://` + credentials case surfaces as a connection error (`ERR_SOCKS_CONNECTION_FAILED`), **not** as
+a credentials error, which makes it easy to misdiagnose.
+
+A `socks5://` + credentials provider is still usable, just not directly. Three ways out, in order of
+preference:
+
+1. **IP whitelisting.** Register this server's IP with the provider and leave the credentials blank. Simplest,
+   and keeps no secrets on disk.
+2. **Use the provider's `http://` endpoint.** Most residential providers expose both HTTP and SOCKS5 on
+   different ports, and credentials work fine over HTTP. Usually a one-line change - check this first.
+3. **Run a local authless shim** which takes an authless connection from FlareSolverr and adds the credentials
+   upstream - architecturally identical to what dante already does for the tunnel:
+
+   ```bash
+   gost -L socks5://172.17.0.1:1081 -F socks5://user:pass@gateway.example.com:7000
+   ```
+
+   Then point `url` at `socks5://172.17.0.1:1081` and leave `username`/`password` blank. Chromium sees an
+   authless SOCKS5 proxy and the shim speaks RFC 1929 on its behalf. Bind it to the docker bridge gateway
+   rather than `127.0.0.1`, for the same reason the tunnel does.
+
+**`check-commercial-proxy.sh` cannot catch this.** It probes with curl, which implements RFC 1929 itself, so a
+`socks5://` + credentials setup authenticates fine under curl and still fails inside FlareSolverr. Check 4
+only confirms the container is running, not that the browser can authenticate through the proxy.
 
 ### Setup
 

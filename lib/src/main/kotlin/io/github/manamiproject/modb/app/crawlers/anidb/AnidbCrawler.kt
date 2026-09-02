@@ -12,10 +12,14 @@ import io.github.manamiproject.modb.app.crawlers.IdRangeSelector
 import io.github.manamiproject.modb.app.crawlers.IntegerBasedIdRangeSelector
 import io.github.manamiproject.modb.app.dataset.DeadEntriesAccessor
 import io.github.manamiproject.modb.app.dataset.DefaultDeadEntriesAccessor
+import io.github.manamiproject.modb.app.network.CommercialProxyConfig
 import io.github.manamiproject.modb.app.network.LinuxNetworkController
 import io.github.manamiproject.modb.app.network.NetworkController
 import io.github.manamiproject.modb.app.network.SuspendableHttpClient
+import io.github.manamiproject.modb.app.network.TunnelConfig
 import io.github.manamiproject.modb.app.network.flaresolverrHttpClientFor
+import io.github.manamiproject.modb.app.network.isRoutedElsewhere
+import io.github.manamiproject.modb.app.network.restartUnlessRouted
 import io.github.manamiproject.modb.core.config.MetaDataProviderConfig
 import io.github.manamiproject.modb.core.coverage.KoverIgnore
 import io.github.manamiproject.modb.core.downloader.Downloader
@@ -43,6 +47,9 @@ import kotlin.time.toDuration
  * @property idRangeSelector Delivers the IDs to download.
  * @property httpClient To actually download the anime data.
  * @property downloader Downloader for a specific metadata provider.
+ * @property networkController Rotates this host's outbound IPv6 address. Only used on the direct path.
+ * @property tunnelConfig Determines whether anidb exits through the reverse SSH tunnel.
+ * @property commercialProxyConfig Determines whether anidb exits through the commercial rotating proxy.
  */
 class AnidbCrawler(
     private val appConfig: Config = AppConfig.instance,
@@ -58,13 +65,30 @@ class AnidbCrawler(
         httpClient = httpClient,
     ),
     private val networkController: NetworkController = LinuxNetworkController.instance,
+    private val tunnelConfig: TunnelConfig = TunnelConfig.instance,
+    private val commercialProxyConfig: CommercialProxyConfig = CommercialProxyConfig.instance,
 ): Crawler {
 
+    /**
+     * Whether anidb exits through the tunnel or the commercial proxy rather than this host's own IP. See
+     * [restartUnlessRouted] for why that makes rotating this host's address the wrong recovery.
+     */
+    private val isRoutedElsewhere: Boolean = isRoutedElsewhere(
+        hostname = metaDataProviderConfig.hostname(),
+        tunnelConfig = tunnelConfig,
+        commercialProxyConfig = commercialProxyConfig,
+    )
+
     init {
-        val restart = suspend { networkController.restartAsync().join() }
-        httpClient.addRetryCases(ThrowableRetryCase(executeBefore = restart) { it is ConnectException})
-        httpClient.addRetryCases(ThrowableRetryCase(executeBefore = restart) { it is UnknownHostException})
-        httpClient.addRetryCases(ThrowableRetryCase(executeBefore = restart) { it is NoRouteToHostException})
+        val executeBefore = restartUnlessRouted(
+            hostname = metaDataProviderConfig.hostname(),
+            networkController = networkController,
+            tunnelConfig = tunnelConfig,
+            commercialProxyConfig = commercialProxyConfig,
+        )
+        httpClient.addRetryCases(ThrowableRetryCase(executeBefore = executeBefore) { it is ConnectException})
+        httpClient.addRetryCases(ThrowableRetryCase(executeBefore = executeBefore) { it is UnknownHostException})
+        httpClient.addRetryCases(ThrowableRetryCase(executeBefore = executeBefore) { it is NoRouteToHostException})
     }
 
     override suspend fun start() {
@@ -99,7 +123,15 @@ class AnidbCrawler(
         } catch (e: Throwable) {
             when(e) {
                 is CrawlerDetectedException -> {
-                    networkController.restartAsync().await()
+                    when {
+                        // AntiLeech flagged the tunnel/proxy exit IP, which this host cannot rotate. Back off
+                        // instead, which is the only lever left: on a rotating pool the pause is also what
+                        // gives the next request a chance of a fresh exit IP. If anidb is still flagged
+                        // afterwards, checkIfCrawlerIsDetected below aborts the run, which is the intended
+                        // fail-fast rather than hammering a flagged IP.
+                        isRoutedElsewhere -> backOffAfterCrawlerDetected()
+                        else -> networkController.restartAsync().await()
+                    }
                     val response = downloader.download(animeId.toString()) {
                         deadEntriesAccess.addDeadEntry(it, metaDataProviderConfig)
                     }
@@ -119,6 +151,15 @@ class AnidbCrawler(
                 val pendingFile = appConfig.workingDir(metaDataProviderConfig).resolve("$animeId.${ANIDB_PENDING_FILE_SUFFIX}")
                 response.writeToFile(pendingFile, true)
             }
+        }
+    }
+
+    @KoverIgnore
+    private suspend fun backOffAfterCrawlerDetected() {
+        log.warn { "[${metaDataProviderConfig.hostname()}] detected the crawler on a routed exit IP. Backing off before the retry." }
+        excludeFromTestContext(metaDataProviderConfig) {
+            // Mirrors ThrowableRetryCase's default backoff so both recovery paths wait comparably long.
+            delay(random(60000, 90000).toDuration(MILLISECONDS))
         }
     }
 

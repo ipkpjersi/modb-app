@@ -30,6 +30,12 @@ import io.github.manamiproject.modb.core.extensions.EMPTY
  *   authorizes the crawl server by IP (IP whitelisting).
  * - [username] and [password] set: the credentials are sent in the FlareSolverr session's proxy block.
  *
+ * Credentials only work over an `http(s)://` proxy, where FlareSolverr's generated extension can answer the
+ * HTTP 407 challenge. Chromium does not implement SOCKS5 username/password auth (RFC 1929), so a
+ * `socks5://` [url] carrying credentials fails at the SOCKS handshake and surfaces as a connection error
+ * rather than an auth error. Use IP whitelisting, the provider's HTTP endpoint, or a local authless shim
+ * instead - see `scripts/tunnel/README.md`.
+ *
  * **Default** is disabled so a host without a commercial proxy behaves exactly as before.
  *
  * @since 1.15.0

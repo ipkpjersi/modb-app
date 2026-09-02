@@ -11,6 +11,12 @@
 # Run this before enabling modb.app.proxy.commercial and re-activating anidb, and any time an anidb crawl
 # fails with a proxy error. This is the commercial-path counterpart of check-tunnel.sh.
 #
+# KNOWN BLIND SPOT: these checks probe with curl, which implements SOCKS5 username/password auth (RFC 1929).
+# Chromium does not, so a socks5:// endpoint WITH credentials passes every check here and still fails inside
+# FlareSolverr, as a connection error rather than an auth error. Check 4 only confirms the container is
+# running, not that its browser can authenticate through the proxy. See README.md - use IP whitelisting, the
+# provider's http:// endpoint, or a local authless shim for that case.
+#
 # Config comes from the environment (these are secret, keep them out of the repo):
 #   COMMERCIAL_PROXY_URL          e.g. socks5://gateway.example.com:7000  (required)
 #   COMMERCIAL_PROXY_USER         proxy username    (optional - leave blank for IP whitelisting)
@@ -76,6 +82,12 @@ echo "== 4. dedicated FlareSolverr container on port ${FLARESOLVERR_COMMERCIAL_P
 # Match by the published host port, so this finds the commercial container and not the tunnel one. The
 # published mapping shows as '127.0.0.1:8192->8191/tcp'.
 container="$(docker ps --filter "ancestor=${FLARESOLVERR_IMAGE_MATCH}" --format '{{.ID}} {{.Ports}}' 2>/dev/null | grep ":${FLARESOLVERR_COMMERCIAL_PORT}->" | awk '{print $1}' | head -1)"
+# 'ancestor' needs the image reference to match, and the real one is fully qualified
+# (ghcr.io/flaresolverr/flaresolverr:v3.5.0), so the filter above finds nothing in practice. Fall back to
+# matching the image column, exactly as check-tunnel.sh does.
+if [ -z "$container" ]; then
+    container="$(docker ps --format '{{.ID}} {{.Image}} {{.Ports}}' 2>/dev/null | grep -i "$FLARESOLVERR_IMAGE_MATCH" | grep ":${FLARESOLVERR_COMMERCIAL_PORT}->" | awk '{print $1}' | head -1)"
+fi
 if [ -z "$container" ]; then
     fail "no FlareSolverr container publishing port ${FLARESOLVERR_COMMERCIAL_PORT} - start it (see README.md) or let the app start it on the next run."
 else
@@ -85,6 +97,14 @@ fi
 echo
 if [ "$failures" -eq 0 ]; then
     echo "All checks passed. Safe to enable modb.app.proxy.commercial and re-activate anidb."
+    # curl authenticates to SOCKS5 where Chromium cannot, so warn on the one combination these checks
+    # cannot actually validate rather than letting the all-clear above imply it was tested.
+    if [ -n "$PROXY_USER" ] && case "$PROXY_URL" in socks5*|socks4*) true;; *) false;; esac; then
+        echo
+        echo "WARNING: this is a SOCKS proxy WITH credentials. curl authenticated, but Chromium does not"
+        echo "         implement SOCKS5 user/password auth, so FlareSolverr will still fail. Use IP"
+        echo "         whitelisting, the provider's http:// endpoint, or a local authless shim (README.md)."
+    fi
     exit 0
 fi
 echo "${failures} check(s) failed."

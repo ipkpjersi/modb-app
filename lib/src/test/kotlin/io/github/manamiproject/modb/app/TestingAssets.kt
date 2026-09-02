@@ -89,6 +89,15 @@ internal object TestMetaDataProviderConfig: MetaDataProviderConfig {
     override fun fileSuffix(): FileSuffix = shouldNotBeInvoked()
 }
 
+/**
+ * [TestMetaDataProviderConfig] with a usable [MetaDataProviderConfig.hostname]. Crawlers ask for the hostname
+ * at construction time to decide whether the provider is routed through the tunnel or the commercial proxy,
+ * which the plain object refuses.
+ */
+internal fun routableTestMetaDataProviderConfig(hostname: Hostname = "example.org") = object: MetaDataProviderConfig by TestMetaDataProviderConfig {
+    override fun hostname(): Hostname = hostname
+}
+
 internal object TestAppConfig: Config {
     override fun isTestContext(): Boolean = true
     override fun currentWeekWorkingDir(): Directory = shouldNotBeInvoked()

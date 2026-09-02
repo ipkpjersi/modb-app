@@ -55,6 +55,57 @@ fun tunnelAwareHttpClient(
 )
 
 /**
+ * Whether traffic for [hostname] leaves through the reverse SSH tunnel or the commercial rotating proxy
+ * rather than through this host's own IP.
+ *
+ * The two routes are mutually exclusive (enforced by [checkCommercialProxy]), so this only answers whether
+ * the exit IP belongs to this host, which is what the recovery strategies below turn on.
+ *
+ * @since 1.15.0
+ * @param hostname Hostname of a metadata provider.
+ * @param tunnelConfig Configuration of the reverse SSH tunnel.
+ * @param commercialProxyConfig Configuration of the commercial rotating proxy.
+ * @return `true` if [hostname] exits through the tunnel or the commercial proxy.
+ */
+fun isRoutedElsewhere(
+    hostname: Hostname,
+    tunnelConfig: TunnelConfig = TunnelConfig.instance,
+    commercialProxyConfig: CommercialProxyConfig = CommercialProxyConfig.instance,
+): Boolean = tunnelConfig.isTunneled(hostname) || commercialProxyConfig.isRouted(hostname)
+
+/**
+ * Builds the `executeBefore` action for the connection-failure retry cases of a crawler.
+ *
+ * Rotating this host's outbound IPv6 address is only a valid recovery while the provider is crawled over the
+ * direct datacenter path. Once [hostname] is routed, the rotation is:
+ * - **useless**, because the provider sees the tunnel's or the proxy pool's exit IP, not this host's,
+ * - **harmful to every other provider**, because [SuspendableHttpClient] gates all requests while the
+ *   interface bounces,
+ * - **counterproductive**, because dropping the interface also drops the SSH tunnel that the routed
+ *   provider(s) depend on, forcing autossh to reconnect.
+ *
+ * Returning a no-op leaves the retry itself intact, so a routed provider still retries with
+ * [io.github.manamiproject.modb.core.httpclient.ThrowableRetryCase]'s default backoff.
+ *
+ * @since 1.15.0
+ * @param hostname Hostname of a metadata provider.
+ * @param networkController Rotates this host's outbound IPv6 address.
+ * @param tunnelConfig Configuration of the reverse SSH tunnel.
+ * @param commercialProxyConfig Configuration of the commercial rotating proxy.
+ * @return An action which restarts the network on the direct path and does nothing while routed.
+ */
+fun restartUnlessRouted(
+    hostname: Hostname,
+    networkController: NetworkController,
+    tunnelConfig: TunnelConfig = TunnelConfig.instance,
+    commercialProxyConfig: CommercialProxyConfig = CommercialProxyConfig.instance,
+): suspend () -> Unit = if (isRoutedElsewhere(hostname, tunnelConfig, commercialProxyConfig)) {
+    { }
+} else {
+    { networkController.restartAsync().join() }
+}
+
+/**
  * Verifies that the reverse SSH tunnel is up, and throws if it is not.
  *
  * Called before any crawler starts so that a missing tunnel aborts the run immediately instead of letting

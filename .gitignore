@@ -383,3 +383,11 @@ gradle-app.setting
 
 # CUSTOM
 discord-webhook.txt
+
+### Python ###
+# The helper scripts in scripts/ are Python; the interpreter writes caches next to them.
+# No leading slash, so these match at any depth rather than only in the repository root.
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/

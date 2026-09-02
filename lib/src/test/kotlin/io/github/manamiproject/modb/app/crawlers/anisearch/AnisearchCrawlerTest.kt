@@ -62,7 +62,7 @@ internal class AnisearchCrawlerTest {
                 // when
                 AnisearchCrawler(
                     appConfig = TestAppConfig,
-                    metaDataProviderConfig = TestMetaDataProviderConfig,
+                    metaDataProviderConfig = routableTestMetaDataProviderConfig(),
                     downloadControlStateScheduler = TestDownloadControlStateScheduler,
                     downloadControlStateAccessor = TestDownloadControlStateAccessor,
                     lastPageMemorizer = TestLastPageMemorizerInt,

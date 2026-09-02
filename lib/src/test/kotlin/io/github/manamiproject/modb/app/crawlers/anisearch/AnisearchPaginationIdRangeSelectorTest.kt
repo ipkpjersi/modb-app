@@ -51,8 +51,8 @@ internal class AnisearchPaginationIdRangeSelectorTest {
 
                 // when
                 AnisearchPaginationIdRangeSelector(
-                    metaDataProviderConfig = TestMetaDataProviderConfig,
-                    paginationIdRangeSelectorConfig = TestMetaDataProviderConfig,
+                    metaDataProviderConfig = routableTestMetaDataProviderConfig(),
+                    paginationIdRangeSelectorConfig = routableTestMetaDataProviderConfig(),
                     httpClient = testHttpClient,
                     networkController = testNetworkController,
                     extractor= TestDataExtractor,
