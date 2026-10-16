@@ -5,6 +5,7 @@ import io.github.manamiproject.modb.anilist.AnilistDownloader
 import io.github.manamiproject.modb.anilist.AnilistHttpClient
 import io.github.manamiproject.modb.app.config.AppConfig
 import io.github.manamiproject.modb.app.config.Config
+import io.github.manamiproject.modb.app.crawlers.CappedIdRangeSelector
 import io.github.manamiproject.modb.app.crawlers.Crawler
 import io.github.manamiproject.modb.app.crawlers.IdRangeSelector
 import io.github.manamiproject.modb.app.crawlers.IntegerBasedIdRangeSelector
@@ -38,9 +39,12 @@ class AnilistCrawler(
     private val appConfig: Config = AppConfig.instance,
     private val metaDataProviderConfig: MetaDataProviderConfig = AnilistConfig,
     private val deadEntriesAccess: DeadEntriesAccessor = DefaultDeadEntriesAccessor.instance,
-    private val idRangeSelector: IdRangeSelector<Int> = IntegerBasedIdRangeSelector(
+    private val idRangeSelector: IdRangeSelector<Int> = CappedIdRangeSelector(
         metaDataProviderConfig = metaDataProviderConfig,
-        highestIdDetector = AnilistHighestIdDetector.instance,
+        delegate = IntegerBasedIdRangeSelector(
+            metaDataProviderConfig = metaDataProviderConfig,
+            highestIdDetector = AnilistHighestIdDetector.instance,
+        ),
     ),
     private val downloader: Downloader = AnilistDownloader(
         httpClient = SuspendableHttpClient(

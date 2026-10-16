@@ -50,6 +50,9 @@ import java.util.concurrent.TimeUnit.*
  * @property okhttpClient Instance of the OKHTTP client on which this client is based.
  * @property isTestContext Whether this runs in the unit test context or not.
  * @property headerCreator Creates default headers based on the selected browser type.
+ * @property retryServerErrors Whether server-error status codes are retried by this client. **Default** is `true`.
+ * Set to `false` when the caller has to read the error response body: the retry path closes the body before the
+ * caller ever sees it, so an API which reports its own failures in the body of a 5xx cannot be understood.
  */
 public class DefaultHttpClient(
     proxy: Proxy = NO_PROXY,
@@ -69,12 +72,28 @@ public class DefaultHttpClient(
     private val isTestContext: Boolean = false,
     private val headerCreator: HeaderCreator = DefaultHeaderCreator.instance,
     private val bufferResponseBody: Boolean = true,
+    private val retryServerErrors: Boolean = true,
 ) : HttpClient {
 
     private val retryBehavior: RetryBehavior = RetryBehavior()
 
     init {
+        if (retryServerErrors) {
+            retryBehavior.addCases(*serverErrorRetryCases())
+        }
+
         retryBehavior.addCases(
+            ThrowableRetryCase { it is SocketTimeoutException },
+            ThrowableRetryCase { it is SocketException },
+        )
+    }
+
+    /**
+     * The status codes this client retries by default. Separated from the always-on transport-level cases so
+     * [retryServerErrors] can switch them off without losing the retry on a socket fault.
+     */
+    private fun serverErrorRetryCases(): Array<RetryCase> =
+        arrayOf(
             // Server errors based on https://http.dev/status#5xx-server-error
             HttpResponseRetryCase { it.code == 500 },
             HttpResponseRetryCase { it.code == 501 },
@@ -104,10 +123,7 @@ public class DefaultHttpClient(
             HttpResponseRetryCase { it.code == 425 },
             HttpResponseRetryCase { it.code == 429 },
             HttpResponseRetryCase { it.code == 103 },
-            ThrowableRetryCase { it is SocketTimeoutException },
-            ThrowableRetryCase { it is SocketException },
         )
-    }
 
     override suspend fun post(
         url: URL,

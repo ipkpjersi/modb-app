@@ -244,6 +244,96 @@ internal class DefaultHttpClientKtTest : MockServerTestCase<WireMockServer> by W
             }
         }
 
+        @Test
+        fun `retryServerErrors is false - returns the error response with its body instead of retrying`() {
+            runTest {
+                // given
+                // An API which reports its own failures in the body of a 5xx cannot be understood if the body
+                // is gone: the retry path closes it before the caller sees it, and every retry goes to the same
+                // place anyway. FlaresolverrHttpClient depends on this to tell a refused exit IP from an
+                // unsolved challenge, which are both HTTP 500 but need opposite responses.
+                val path = "anime/1535"
+
+                serverInstance.stubFor(
+                    get(urlPathEqualTo("/$path"))
+                        .willReturn(
+                            aResponse()
+                                .withHeader("Content-Type", "application/json")
+                                .withStatus(500)
+                                .withBody("""{"status":"error","message":"IP is banned"}""")
+                        )
+                )
+
+                val url = URI("http://localhost:$port/$path").toURL()
+
+                val client = DefaultHttpClient(
+                    isTestContext = true,
+                    retryServerErrors = false,
+                )
+
+                // when
+                val result = client.get(url)
+
+                // then
+                assertThat(result.code).isEqualTo(500)
+                assertThat(result.bodyAsString()).isEqualTo("""{"status":"error","message":"IP is banned"}""")
+                serverInstance.verify(1, getRequestedFor(urlPathEqualTo("/$path")))
+            }
+        }
+
+        @Test
+        fun `retryServerErrors is false - still retries a SocketTimeoutException`() {
+            runTest {
+                // given
+                // Only the status-code cases are switched off. A socket fault says nothing about a response,
+                // because there is no response to read a reason out of, so retrying it is still right.
+                val path = "anime/1535"
+
+                serverInstance.stubFor(
+                    get(urlPathEqualTo("/$path"))
+                        .inScenario("SocketTimeoutException triggers retry")
+                        .whenScenarioStateIs(STARTED)
+                        .willReturn(
+                            aResponse()
+                                .withHeader("Content-Type", "text/plain")
+                                .withStatus(200)
+                                .withFixedDelay(6000)
+                        )
+                        .willSetStateTo("Retry")
+                )
+                serverInstance.stubFor(
+                    get(urlPathEqualTo("/$path"))
+                        .inScenario("SocketTimeoutException triggers retry")
+                        .whenScenarioStateIs("Retry")
+                        .willReturn(
+                            aResponse()
+                                .withHeader("Content-Type", "text/plain")
+                                .withStatus(200)
+                                .withBody("Success")
+                        )
+                )
+
+                val url = URI("http://localhost:$port/$path").toURL()
+
+                val client = DefaultHttpClient(
+                    isTestContext = true,
+                    okhttpClient = OkHttpClient.Builder()
+                        .retryOnConnectionFailure(true)
+                        .connectTimeout(1L, SECONDS)
+                        .readTimeout(5L, SECONDS)
+                        .build(),
+                    retryServerErrors = false,
+                )
+
+                // when
+                val result = client.get(url)
+
+                // then
+                assertThat(result.code).isEqualTo(200)
+                assertThat(result.bodyAsString()).isEqualTo("Success")
+            }
+        }
+
         @ParameterizedTest
         @ValueSource(ints = [500, 501, 502, 503, 504, 505, 506, 507, 508, 509, 510, 511, 520, 521, 522, 523, 524, 525, 526, 527, 529, 530, 561, 598, 599, 425, 429])
         fun `performs retry for a variety of status codes`(value: Int) {

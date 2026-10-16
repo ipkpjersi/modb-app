@@ -2,6 +2,7 @@ package io.github.manamiproject.modb.app.crawlers.kitsu
 
 import io.github.manamiproject.modb.app.config.AppConfig
 import io.github.manamiproject.modb.app.config.Config
+import io.github.manamiproject.modb.app.crawlers.CappedIdRangeSelector
 import io.github.manamiproject.modb.app.crawlers.Crawler
 import io.github.manamiproject.modb.app.crawlers.IdRangeSelector
 import io.github.manamiproject.modb.app.crawlers.IntegerBasedIdRangeSelector
@@ -37,9 +38,12 @@ class KitsuCrawler @KoverIgnore constructor(
     private val appConfig: Config = AppConfig.instance,
     private val metaDataProviderConfig: MetaDataProviderConfig = KitsuConfig,
     private val deadEntriesAccess: DeadEntriesAccessor = DefaultDeadEntriesAccessor.instance,
-    private val idRangeSelector: IdRangeSelector<Int> = IntegerBasedIdRangeSelector(
+    private val idRangeSelector: IdRangeSelector<Int> = CappedIdRangeSelector(
         metaDataProviderConfig = metaDataProviderConfig,
-        highestIdDetector = KitsuHighestIdDetector.instance,
+        delegate = IntegerBasedIdRangeSelector(
+            metaDataProviderConfig = metaDataProviderConfig,
+            highestIdDetector = KitsuHighestIdDetector.instance,
+        ),
     ),
     private val downloader: Downloader = KitsuDownloader(
         metaDataProviderConfig = metaDataProviderConfig,

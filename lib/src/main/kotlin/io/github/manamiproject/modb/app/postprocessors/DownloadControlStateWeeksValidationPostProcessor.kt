@@ -13,6 +13,11 @@ import io.github.manamiproject.modb.core.logging.LoggerDelegate
  * Supposed to run after updating all DCS entries.
  * Entries of a metadata provider listed in [Config.deactivatedMetaDataProviders] are skipped. No crawler runs for
  * those, so their DCS entries are never updated and their week for the next download passes by design.
+ *
+ * Entries of a provider with a [Config.maxEntriesPerRun] limit are skipped for the same reason. A capped run
+ * downloads only the first n of the ids due this week and leaves the rest for a later run, so by design some
+ * of its entries still carry a week in the past when this runs. Checking them would abort every capped run
+ * at the very last step, after the dataset has already been written.
  * @since 1.0.0
  * @property appConfig Application specific configuration. Uses [AppConfig] by default.
  * @property downloadControlStateAccessor Access to DCS files.
@@ -32,8 +37,18 @@ class DownloadControlStateWeeksValidationPostProcessor(
             log.info { "Skipping deactivated metadata provider: [${deactivatedMetaDataProviders.sorted().joinToString(", ")}]" }
         }
 
+        // A capped provider cannot satisfy this check by construction: it refreshes only the first n ids due
+        // this week, so the ones it skipped still have a next-download week in the past.
+        val cappedMetaDataProviders = appConfig.cappedMetaDataProviders()
+
+        if (cappedMetaDataProviders.isNotEmpty()) {
+            log.info { "Skipping metadata provider capped by 'maxEntriesPerRun': [${cappedMetaDataProviders.sorted().joinToString(", ")}]" }
+        }
+
+        val exemptMetaDataProviders = deactivatedMetaDataProviders + cappedMetaDataProviders
+
         downloadControlStateAccessor.allDcsEntries()
-            .filterNot { it.anime.sources.first().host in deactivatedMetaDataProviders }
+            .filterNot { it.anime.sources.first().host in exemptMetaDataProviders }
             .forEach {
                 check(it.nextDownload > WeekOfYear.currentWeek()) { "Week for next download of ${it.anime.sources} is not set in the future." }
                 check(it.lastDownloaded <= WeekOfYear.currentWeek()) { "Week for last download of ${it.anime.sources} is neither current week nor a week of the past." }

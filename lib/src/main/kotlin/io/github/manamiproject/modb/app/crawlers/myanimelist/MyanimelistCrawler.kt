@@ -2,6 +2,7 @@ package io.github.manamiproject.modb.app.crawlers.myanimelist
 
 import io.github.manamiproject.modb.app.config.AppConfig
 import io.github.manamiproject.modb.app.config.Config
+import io.github.manamiproject.modb.app.crawlers.CappedIdRangeSelector
 import io.github.manamiproject.modb.app.crawlers.Crawler
 import io.github.manamiproject.modb.app.crawlers.IdRangeSelector
 import io.github.manamiproject.modb.app.crawlers.IntegerBasedIdRangeSelector
@@ -37,9 +38,12 @@ class MyanimelistCrawler(
     private val appConfig: Config = AppConfig.instance,
     private val metaDataProviderConfig: MetaDataProviderConfig = MyanimelistConfig,
     private val deadEntriesAccess: DeadEntriesAccessor = DefaultDeadEntriesAccessor.instance,
-    private val idRangeSelector: IdRangeSelector<Int> = IntegerBasedIdRangeSelector(
+    private val idRangeSelector: IdRangeSelector<Int> = CappedIdRangeSelector(
         metaDataProviderConfig = metaDataProviderConfig,
-        highestIdDetector = MyanimelistHighestIdDetector.instance,
+        delegate = IntegerBasedIdRangeSelector(
+            metaDataProviderConfig = metaDataProviderConfig,
+            highestIdDetector = MyanimelistHighestIdDetector.instance,
+        ),
     ),
     private val downloader: Downloader = MyanimelistDownloader(
         httpClient = SuspendableHttpClient(),

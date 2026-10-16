@@ -44,7 +44,7 @@ internal class FlaresolverrKtTest {
                     "docker",
                     "ps",
                     "--filter",
-                    "ancestor=ghcr.io/flaresolverr/flaresolverr:v3.5.0",
+                    "ancestor=ghcr.io/flaresolverr/flaresolverr:v3.5.2",
                     "--format",
                     "{{.ID}} {{.Ports}}",
                 )
@@ -80,7 +80,7 @@ internal class FlaresolverrKtTest {
                     "docker",
                     "ps",
                     "--filter",
-                    "ancestor=ghcr.io/flaresolverr/flaresolverr:v3.5.0",
+                    "ancestor=ghcr.io/flaresolverr/flaresolverr:v3.5.2",
                     "--format",
                     "{{.ID}} {{.Ports}}",
                 ),
@@ -94,7 +94,7 @@ internal class FlaresolverrKtTest {
                     "127.0.0.1:8191:8191",
                     "-e",
                     "LOG_LEVEL=info",
-                    "ghcr.io/flaresolverr/flaresolverr:v3.5.0",
+                    "ghcr.io/flaresolverr/flaresolverr:v3.5.2",
                 ),
             )
         }
@@ -133,7 +133,7 @@ internal class FlaresolverrKtTest {
                 "127.0.0.1:9009:8191",
                 "-e",
                 "LOG_LEVEL=info",
-                "ghcr.io/flaresolverr/flaresolverr:v3.5.0",
+                "ghcr.io/flaresolverr/flaresolverr:v3.5.2",
             )
         }
 
@@ -171,7 +171,7 @@ internal class FlaresolverrKtTest {
                 "127.0.0.1:8191:8191",
                 "-e",
                 "LOG_LEVEL=error",
-                "ghcr.io/flaresolverr/flaresolverr:v3.5.0",
+                "ghcr.io/flaresolverr/flaresolverr:v3.5.2",
             )
         }
 

@@ -5,6 +5,7 @@ import io.github.manamiproject.kommand.JavaProcessBuilder
 import io.github.manamiproject.modb.core.config.ConfigRegistry
 import io.github.manamiproject.modb.core.config.DefaultConfigRegistry
 import io.github.manamiproject.modb.core.config.Hostname
+import io.github.manamiproject.modb.core.config.BooleanPropertyDelegate
 import io.github.manamiproject.modb.core.config.IntPropertyDelegate
 import io.github.manamiproject.modb.core.config.StringPropertyDelegate
 import io.github.manamiproject.modb.core.extensions.EMPTY
@@ -17,7 +18,18 @@ import java.time.format.DateTimeFormatter
  * Docker image used for FlareSolverr.
  * @since 1.13.0
  */
-private const val FLARESOLVERR_IMAGE = "ghcr.io/flaresolverr/flaresolverr:v3.5.0"
+/**
+ * Image used both to start a container and - via `docker ps --filter ancestor=` - to recognise one that is
+ * already running. Those two uses make the exact tag load-bearing: upgrading the running container without
+ * changing this constant makes the reuse lookup miss, so a second container is started and fails with
+ * "port is already allocated" (which is what happened on 2026-10-16).
+ *
+ * v3.5.2 is the minimum. On v3.5.0 an authenticated proxy is silently ignored - its generated proxy
+ * extension relies on `--load-extension`, which that build's Chromium no longer honours, so the browser ends
+ * up with no proxy at all and exits from this host's own IP. That is a ban risk rather than an error, since
+ * nothing in the response says the proxy was skipped.
+ */
+private const val FLARESOLVERR_IMAGE = "ghcr.io/flaresolverr/flaresolverr:v3.5.2"
 
 
 /**
@@ -47,6 +59,23 @@ class FlaresolverrConfig(
      * serializes all access. Raise it only if you run a FlareSolverr setup that can handle parallel requests.
      * @since 1.13.0
      */
+    /**
+     * Whether to resolve and log the exit IP of each newly created session which goes through a proxy.
+     *
+     * Costs one extra request per session creation - a few hundred over a full anidb seed, which is nothing
+     * against pages measured in hundreds of kilobytes. Worth it because the crawl log otherwise cannot show
+     * that rotation actually changed the exit IP: the app only ever sees FlareSolverr's own session id, and a
+     * new session id proves a new browser, not a new address.
+     *
+     * **Default** is `true`.
+     * @since 1.15.0
+     */
+    val logExitIp by BooleanPropertyDelegate(
+        namespace = "modb.app.flaresolverr",
+        default = true,
+        configRegistry = configRegistry,
+    )
+
     val maxConcurrency by IntPropertyDelegate(
         namespace = "modb.app.flaresolverr",
         default = 1,
@@ -57,6 +86,11 @@ class FlaresolverrConfig(
      * Time in milliseconds FlareSolverr is allowed to spend solving a single challenge before it gives up.
      * Passed as `maxTimeout` in each request. A higher value makes heavy pages less likely to fail with an
      * internal error under load. Defaults to `120000` (2 minutes).
+     *
+     * Raising this is not free, because the budget is spent in full on every failure rather than only on a
+     * slow success. Measured against anidb on 2026-10-16: the slowest solves which still succeeded took 146s,
+     * 117s, 116s, 104s and 103s, and nothing between 150s and 240s ever succeeded. Set it from what the
+     * site's solves actually cost plus some headroom, rather than generously.
      * @since 1.13.0
      */
     val maxTimeout by IntPropertyDelegate(

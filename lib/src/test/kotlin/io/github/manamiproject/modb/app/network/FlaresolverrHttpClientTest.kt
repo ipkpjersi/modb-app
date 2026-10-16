@@ -133,6 +133,10 @@ internal class FlaresolverrHttpClientTest {
                     port = commercialProxyConfig.flaresolverrPort,
                     httpClient = flaresolverr,
                 )
+                // The commercial endpoint's session map is global, so drop anything an earlier test left in it
+                // and only count the session this test creates.
+                flaresolverrHttpClient.destroySessions()
+                flaresolverr.reset()
 
                 // when
                 flaresolverrHttpClient.get(URI("https://anidb.net/anime/1535").toURL())
@@ -242,6 +246,412 @@ internal class FlaresolverrHttpClientTest {
      * many crawlers it has). This suite runs tests concurrently, so the classes touching that map must not
      * run at the same time - destroySessions() in particular clears it wholesale.
      */
+    @Nested
+    @ResourceLock(SESSIONS)
+    inner class SessionRotationTests {
+
+        @Test
+        fun `recycles the session every rotateAfterRequests requests, with a fresh session id each time`() {
+            runTest {
+                // given
+                val flaresolverr = FlaresolverrStub()
+                val commercialProxyConfig = CommercialProxyConfig(rotatingCommercialRegistry(
+                    url = "http://gw.example.com:7000",
+                    username = "user-{session}",
+                    password = "pass",
+                    rotateAfterRequests = 3,
+                ))
+                val flaresolverrHttpClient = FlaresolverrHttpClient(
+                    appConfig = TestAppConfig,
+                    commercialProxyConfig = commercialProxyConfig,
+                    port = commercialProxyConfig.flaresolverrPort,
+                    httpClient = flaresolverr,
+                )
+
+                // when
+                repeat(7) { flaresolverrHttpClient.get(URI("https://anidb.net/anime/$it").toURL()) }
+
+                // then
+                // Sessions 1 and 2 each serve exactly 3 requests, so the 4th and 7th trigger a recycle.
+                assertThat(flaresolverr.crawlRequests).hasSize(7)
+                assertThat(flaresolverr.sessionCreations).hasSize(3)
+                assertThat(flaresolverr.sessionDestroys).hasSize(2)
+
+                // One warm-up per session, so the Cloudflare challenge each new exit IP has to clear is never
+                // charged to one of the 7 entries.
+                assertThat(flaresolverr.warmUpRequests).hasSize(3)
+
+                // The point of recycling: each new session presents credentials the provider has not seen, so
+                // it hands out a different residential exit IP. Identical ids would defeat it entirely.
+                val sessionIds = flaresolverr.sessionCreations.map {
+                    Regex(""""username":"user-([a-z0-9]{8})"""").find(it)!!.groupValues[1]
+                }
+                assertThat(sessionIds).doesNotHaveDuplicates()
+
+                flaresolverrHttpClient.destroySessions()
+            }
+        }
+
+        @Test
+        fun `never recycles when rotateAfterRequests is zero`() {
+            runTest {
+                // given
+                val flaresolverr = FlaresolverrStub()
+                val commercialProxyConfig = CommercialProxyConfig(rotatingCommercialRegistry(
+                    url = "http://gw.example.com:7000",
+                    username = "user-{session}",
+                    password = "pass",
+                    rotateAfterRequests = 0,
+                ))
+                val flaresolverrHttpClient = FlaresolverrHttpClient(
+                    appConfig = TestAppConfig,
+                    commercialProxyConfig = commercialProxyConfig,
+                    port = commercialProxyConfig.flaresolverrPort,
+                    httpClient = flaresolverr,
+                )
+
+                // when
+                repeat(5) { flaresolverrHttpClient.get(URI("https://anidb.net/anime/$it").toURL()) }
+
+                // then
+                assertThat(flaresolverr.sessionCreations).hasSize(1)
+                assertThat(flaresolverr.sessionDestroys).isEmpty()
+
+                flaresolverrHttpClient.destroySessions()
+            }
+        }
+
+        @Test
+        fun `never recycles a tunneled provider, whose single residential IP cannot rotate`() {
+            runTest {
+                // given
+                val flaresolverr = FlaresolverrStub()
+                val flaresolverrHttpClient = FlaresolverrHttpClient(
+                    appConfig = TestAppConfig,
+                    tunnelConfig = TunnelConfig(enabledTunnelRegistry()),
+                    commercialProxyConfig = CommercialProxyConfig(rotatingCommercialRegistry(
+                        url = "http://gw.example.com:7000",
+                        username = "user-{session}",
+                        password = "pass",
+                        rotateAfterRequests = 2,
+                    )),
+                    httpClient = flaresolverr,
+                )
+
+                // when
+                repeat(6) { flaresolverrHttpClient.get(URI("https://anisearch.com/anime/$it").toURL()) }
+
+                // then
+                // Recycling here would discard a valid Cloudflare clearance and gain nothing, since the
+                // tunnel always exits from the same home IP.
+                assertThat(flaresolverr.sessionCreations).hasSize(1)
+                assertThat(flaresolverr.sessionDestroys).isEmpty()
+
+                flaresolverrHttpClient.destroySessions()
+            }
+        }
+    }
+
+    @Nested
+    @ResourceLock(SESSIONS)
+    inner class BlockedExitIpTests {
+
+        @Test
+        fun `recycles the session and retries once when the exit IP is blocked`() {
+            runTest {
+                // given
+                // FlareSolverr reports a Cloudflare refusal of the exit IP in its message, with no distinct
+                // status. Retrying the same session cannot help - only a different address can.
+                val flaresolverr = object: FlaresolverrStub() {
+                    var blockNextRequest = true
+                    override fun onRequest(body: String): HttpResponse = when {
+                        blockNextRequest -> {
+                            blockNextRequest = false
+                            ok("""{"status":"error","message":"Error solving the challenge. Cloudflare has blocked this request. Probably your IP is banned for this site, check in your web browser."}""")
+                        }
+                        else -> super.onRequest(body)
+                    }
+                }
+                val commercialProxyConfig = CommercialProxyConfig(rotatingCommercialRegistry(
+                    url = "http://gw.example.com:7000",
+                    username = "user-{session}",
+                    password = "pass",
+                    rotateAfterRequests = 50,
+                ))
+                val flaresolverrHttpClient = FlaresolverrHttpClient(
+                    appConfig = TestAppConfig,
+                    commercialProxyConfig = commercialProxyConfig,
+                    port = commercialProxyConfig.flaresolverrPort,
+                    httpClient = flaresolverr,
+                )
+
+                try {
+                    // when
+                    flaresolverrHttpClient.get(URI("https://anidb.net/anime/1").toURL())
+
+                    // then
+                    // Two sessions: the blocked one, then a replacement with a different id and therefore a
+                    // different exit IP. The blocked one is destroyed rather than left holding a browser.
+                    assertThat(flaresolverr.sessionCreations).hasSize(2)
+                    assertThat(flaresolverr.sessionDestroys).hasSize(1)
+
+                    val sessionIds = flaresolverr.sessionCreations.map {
+                        Regex(""""username":"user-([a-z0-9]{8})"""").find(it)!!.groupValues[1]
+                    }
+                    assertThat(sessionIds).doesNotHaveDuplicates()
+                } finally {
+                    flaresolverrHttpClient.destroySessions()
+                }
+            }
+        }
+
+        @Test
+        fun `does not recycle on a block when a new session cannot change the exit IP`() {
+            runTest {
+                // given
+                // No session placeholder in the credentials, so a replacement session would present the same
+                // credentials and most likely the same IP. Recycling would pay a ~19s solve for nothing.
+                val flaresolverr = object: FlaresolverrStub() {
+                    override fun onRequest(body: String): HttpResponse =
+                        ok("""{"status":"error","message":"Cloudflare has blocked this request. Probably your IP is banned for this site."}""")
+                }
+                val commercialProxyConfig = CommercialProxyConfig(rotatingCommercialRegistry(
+                    url = "http://gw.example.com:7000",
+                    username = "user",
+                    password = "pass",
+                    rotateAfterRequests = 50,
+                ))
+                val flaresolverrHttpClient = FlaresolverrHttpClient(
+                    appConfig = TestAppConfig,
+                    commercialProxyConfig = commercialProxyConfig,
+                    port = commercialProxyConfig.flaresolverrPort,
+                    httpClient = flaresolverr,
+                )
+
+                try {
+                    // when
+                    val result = exceptionExpected<IllegalStateException> {
+                        flaresolverrHttpClient.get(URI("https://anidb.net/anime/1").toURL())
+                    }
+
+                    // then
+                    // Fails rather than returning the blocked response: FlaresolverrResponseSolution defaults
+                    // every field, so returning it would hand the crawler an empty body under HTTP status 100
+                    // as though the page had genuinely been fetched that way.
+                    assertThat(result).hasMessageContaining("FlareSolverr could not serve [anidb.net]")
+                    assertThat(flaresolverr.sessionCreations).hasSize(1)
+                    assertThat(flaresolverr.sessionDestroys).isEmpty()
+                } finally {
+                    flaresolverrHttpClient.destroySessions()
+                }
+            }
+        }
+
+        @Test
+        fun `recycles the session and retries once when a request fails outright`() {
+            runTest {
+                // given
+                // By the time an exception surfaces, the underlying client has already spent its own retries
+                // on the same session and therefore the same exit IP. A different address is the only lever
+                // left, and without this the run fail-fast aborts.
+                // Only the crawl's own request fails. A warm-up failure would never get this far: the
+                // warm-up loop absorbs it and draws another exit IP before the crawl sees the session.
+                var crawlAttempts = 0
+                val flaresolverr = object: FlaresolverrStub() {
+                    override fun onRequest(body: String): HttpResponse {
+                        if (isWarmUp(body)) {
+                            return super.onRequest(body)
+                        }
+
+                        crawlAttempts++
+                        if (crawlAttempts == 1) {
+                            throw IllegalStateException("connection reset")
+                        }
+                        return super.onRequest(body)
+                    }
+                }
+                val commercialProxyConfig = CommercialProxyConfig(rotatingCommercialRegistry(
+                    url = "http://gw.example.com:7000",
+                    username = "user-{session}",
+                    password = "pass",
+                    rotateAfterRequests = 50,
+                ))
+                val flaresolverrHttpClient = FlaresolverrHttpClient(
+                    appConfig = TestAppConfig,
+                    commercialProxyConfig = commercialProxyConfig,
+                    port = commercialProxyConfig.flaresolverrPort,
+                    httpClient = flaresolverr,
+                )
+                flaresolverrHttpClient.destroySessions()
+                flaresolverr.reset()
+
+                try {
+                    // when
+                    flaresolverrHttpClient.get(URI("https://anidb.net/anime/1").toURL())
+
+                    // then
+                    assertThat(crawlAttempts).isEqualTo(2)
+                    assertThat(flaresolverr.sessionCreations).hasSize(2)
+                } finally {
+                    flaresolverrHttpClient.destroySessions()
+                }
+            }
+        }
+    }
+
+    @Nested
+    @ResourceLock(SESSIONS)
+    inner class SessionWarmUpTests {
+
+        @Test
+        fun `clears Cloudflare on a new session before the crawl's first request uses it`() {
+            runTest {
+                // given
+                val flaresolverr = FlaresolverrStub()
+                val commercialProxyConfig = CommercialProxyConfig(rotatingCommercialRegistry(
+                    url = "http://gw.example.com:7000",
+                    username = "user-{session}",
+                    password = "pass",
+                    rotateAfterRequests = 50,
+                ))
+                val flaresolverrHttpClient = FlaresolverrHttpClient(
+                    appConfig = TestAppConfig,
+                    commercialProxyConfig = commercialProxyConfig,
+                    port = commercialProxyConfig.flaresolverrPort,
+                    httpClient = flaresolverr,
+                )
+                flaresolverrHttpClient.destroySessions()
+                flaresolverr.reset()
+
+                try {
+                    // when
+                    flaresolverrHttpClient.get(URI("https://anidb.net/anime/1").toURL())
+
+                    // then
+                    // The challenge is paid once per session and whichever request comes first pays it, so it
+                    // is spent on the site root here instead of on an arbitrary entry.
+                    assertThat(flaresolverr.warmUpRequests).hasSize(1)
+                    assertThat(flaresolverr.warmUpRequests.single()).contains(""""url":"https://anidb.net/"""")
+                    assertThat(flaresolverr.requests.first()).isEqualTo(flaresolverr.warmUpRequests.single())
+                    assertThat(flaresolverr.crawlRequests).hasSize(1)
+                } finally {
+                    flaresolverrHttpClient.destroySessions()
+                }
+            }
+        }
+
+        @Test
+        fun `draws another exit IP when the warm-up cannot clear Cloudflare`() {
+            runTest {
+                // given
+                // The first exit IP cannot solve the challenge, exactly as anidb saw on 2026-10-16. The crawl
+                // must never meet that address.
+                var warmUps = 0
+                val flaresolverr = object: FlaresolverrStub() {
+                    override fun onRequest(body: String): HttpResponse = when {
+                        !isWarmUp(body) -> super.onRequest(body)
+                        ++warmUps == 1 -> ok("""{"status":"error","message":"Error solving the challenge. Timeout after 240.0 seconds."}""")
+                        else -> super.onRequest(body)
+                    }
+                }
+                val commercialProxyConfig = CommercialProxyConfig(rotatingCommercialRegistry(
+                    url = "http://gw.example.com:7000",
+                    username = "user-{session}",
+                    password = "pass",
+                    rotateAfterRequests = 50,
+                ))
+                val flaresolverrHttpClient = FlaresolverrHttpClient(
+                    appConfig = TestAppConfig,
+                    commercialProxyConfig = commercialProxyConfig,
+                    port = commercialProxyConfig.flaresolverrPort,
+                    httpClient = flaresolverr,
+                )
+                flaresolverrHttpClient.destroySessions()
+                flaresolverr.reset()
+
+                try {
+                    // when
+                    val result = flaresolverrHttpClient.get(URI("https://anidb.net/anime/1").toURL())
+
+                    // then
+                    // Two sessions created and the unusable one destroyed, so the failure cost an exit IP
+                    // rather than the entry - which still comes back successfully.
+                    assertThat(warmUps).isEqualTo(2)
+                    assertThat(flaresolverr.sessionCreations).hasSize(2)
+                    assertThat(flaresolverr.sessionDestroys).hasSize(1)
+                    assertThat(flaresolverr.crawlRequests).hasSize(1)
+                    assertThat(result.code).isEqualTo(200)
+                } finally {
+                    flaresolverrHttpClient.destroySessions()
+                }
+            }
+        }
+
+        @Test
+        fun `gives up warming up after a bounded number of exit IPs and lets the crawl continue`() {
+            runTest {
+                // given
+                // Every address fails the warm-up. Retrying for ever would stall the run, so the crawl goes
+                // ahead on the last session: at worst that costs the one entry rather than the whole crawl.
+                val flaresolverr = object: FlaresolverrStub() {
+                    override fun onRequest(body: String): HttpResponse = when {
+                        isWarmUp(body) -> ok("""{"status":"error","message":"Error solving the challenge. Timeout after 240.0 seconds."}""")
+                        else -> super.onRequest(body)
+                    }
+                }
+                val commercialProxyConfig = CommercialProxyConfig(rotatingCommercialRegistry(
+                    url = "http://gw.example.com:7000",
+                    username = "user-{session}",
+                    password = "pass",
+                    rotateAfterRequests = 50,
+                ))
+                val flaresolverrHttpClient = FlaresolverrHttpClient(
+                    appConfig = TestAppConfig,
+                    commercialProxyConfig = commercialProxyConfig,
+                    port = commercialProxyConfig.flaresolverrPort,
+                    httpClient = flaresolverr,
+                )
+                flaresolverrHttpClient.destroySessions()
+                flaresolverr.reset()
+
+                try {
+                    // when
+                    val result = flaresolverrHttpClient.get(URI("https://anidb.net/anime/1").toURL())
+
+                    // then
+                    assertThat(flaresolverr.sessionCreations).hasSize(3)
+                    assertThat(flaresolverr.crawlRequests).hasSize(1)
+                    assertThat(result.code).isEqualTo(200)
+                } finally {
+                    flaresolverrHttpClient.destroySessions()
+                }
+            }
+        }
+
+        @Test
+        fun `does not warm up a session for a provider which exits directly`() {
+            runTest {
+                // given
+                // No proxy, so no Cloudflare challenge to pre-solve and nothing to gain from an extra request.
+                val flaresolverr = FlaresolverrStub()
+                val flaresolverrHttpClient = FlaresolverrHttpClient(appConfig = TestAppConfig, httpClient = flaresolverr)
+                flaresolverrHttpClient.destroySessions()
+                flaresolverr.reset()
+
+                try {
+                    // when
+                    flaresolverrHttpClient.get(URI("https://direct-no-warmup.example/anime/1").toURL())
+
+                    // then
+                    assertThat(flaresolverr.warmUpRequests).isEmpty()
+                    assertThat(flaresolverr.crawlRequests).hasSize(1)
+                } finally {
+                    flaresolverrHttpClient.destroySessions()
+                }
+            }
+        }
+    }
+
     @Nested
     @ResourceLock(SESSIONS)
     inner class DestroySessionsTests {
@@ -354,6 +764,19 @@ private open class FlaresolverrStub(private val sessionId: String = "test-sessio
     var lastRequest = EMPTY
         private set
 
+    /**
+     * The requests a crawler made, i.e. [requests] without the session warm-up.
+     *
+     * A new session fetches the site root once to clear Cloudflare before the crawl uses it, so assertions
+     * about what the crawl asked for have to exclude it.
+     */
+    val crawlRequests: List<String>
+        get() = requests.filterNot { SITE_ROOT_URL.containsMatchIn(it) }
+
+    /** The warm-up requests, one per session which cleared Cloudflare before being handed to the crawl. */
+    val warmUpRequests: List<String>
+        get() = requests.filter { SITE_ROOT_URL.containsMatchIn(it) }
+
     /** Forgets everything recorded so far, so a test can ignore setup traffic. */
     fun reset() {
         sessionCreations.clear()
@@ -362,6 +785,9 @@ private open class FlaresolverrStub(private val sessionId: String = "test-sessio
     }
 
     protected fun ok(json: String) = HttpResponse(code = 200, body = json.toByteArray())
+
+    /** Matches a URL whose path is exactly `/`, which is what the warm-up requests and nothing else does. */
+    protected fun isWarmUp(body: String): Boolean = SITE_ROOT_URL.containsMatchIn(body)
 
     protected open fun onSessionCreate(body: String): HttpResponse = ok("""{"status":"ok","session":"$sessionId"}""")
 
@@ -401,6 +827,33 @@ private fun enabledTunnelRegistry() = object : ConfigRegistry by TestConfigRegis
 }
 
 /**
+ * A [ConfigRegistry] with the commercial proxy switched on, credentials set and an explicit
+ * `rotateAfterRequests`, for exercising session rotation.
+ */
+private fun rotatingCommercialRegistry(
+    url: String,
+    username: String,
+    password: String,
+    rotateAfterRequests: Int,
+) = object : ConfigRegistry by TestConfigRegistry {
+    override fun boolean(key: String): Boolean = true
+    override fun string(key: String): String? = when {
+        key.endsWith(".url") -> url
+        key.endsWith(".username") -> username
+        key.endsWith(".password") -> password
+        else -> null
+    }
+    override fun int(key: String): Int? = null
+
+    @Suppress("UNCHECKED_CAST")
+    override fun <T : Any> list(key: String): List<T>? = when {
+        // Per-provider now, so the threshold arrives as a 'hostname=limit' list rather than a bare int.
+        key.endsWith(".rotateAfterRequests") -> listOf("anidb.net=$rotateAfterRequests") as List<T>?
+        else -> null
+    }
+}
+
+/**
  * A [ConfigRegistry] with the commercial proxy switched on and [url] set (no credentials), everything else at
  * its default - so it routes the default provider (anidb) with just a URL.
  */
@@ -410,3 +863,5 @@ private fun enabledCommercialRegistry(url: String) = object : ConfigRegistry by 
     override fun int(key: String): Int? = null
     override fun <T : Any> list(key: String): List<T>? = null
 }
+
+private val SITE_ROOT_URL = Regex("\"url\"\\s*:\\s*\"https?://[^/\"]+/\"")

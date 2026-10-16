@@ -569,6 +569,146 @@ internal class AnidbCrawlerTest {
         }
 
         @Test
+        fun `skips an entry which times out and carries on with the rest`() {
+            tempDirectory {
+                // given
+                val testMetaDataProviderConfig = object: MetaDataProviderConfig by AnidbConfig {
+                    override fun isTestContext(): Boolean = true
+                }
+
+                val testAppConfig = object : Config by TestAppConfig {
+                    override fun workingDir(metaDataProviderConfig: MetaDataProviderConfig): Directory = tempDir
+                }
+
+                val testIdRangeSelector = object: IdRangeSelector<Int> {
+                    override suspend fun idDownloadList(): List<Int> = listOf(1, 2, 3)
+                }
+
+                val successfulEntry = "successfully loaded content for"
+                val testAnimeDownloader = object: Downloader by TestDownloader {
+                    override suspend fun download(id: AnimeId, onDeadEntry: suspend (AnimeId) -> Unit): String {
+                        // Mirrors the message FlaresolverrHttpClient raises once its own retry on a fresh
+                        // session has already failed.
+                        if (id == "2") {
+                            throw IllegalStateException("FlareSolverr operation for [https://anidb.net/anime/2] exceeded [300000] ms. Aborting the run rather than continuing with a truncated crawl.")
+                        }
+                        return "$successfulEntry $id"
+                    }
+                }
+
+                val crawler = AnidbCrawler(
+                    appConfig = testAppConfig,
+                    metaDataProviderConfig = testMetaDataProviderConfig,
+                    downloader = testAnimeDownloader,
+                    deadEntriesAccess = TestDeadEntriesAccessor,
+                    idRangeSelector = testIdRangeSelector,
+                    networkController = TestNetworkController,
+                )
+
+                // when
+                crawler.start()
+
+                // then
+                // The slow entry costs itself and nothing else: 1 and 3 are still downloaded, and 2 is left
+                // absent so its download week stays in the past and the next run retries it.
+                assertThat(tempDir.resolve("1.html").readFile()).isEqualTo("$successfulEntry 1")
+                assertThat(tempDir.resolve("3.html").readFile()).isEqualTo("$successfulEntry 3")
+                assertThat(tempDir.resolve("2.html")).doesNotExist()
+            }
+        }
+
+        @Test
+        fun `skips an entry whose challenge could not be cleared on any exit IP and carries on with the rest`() {
+            tempDirectory {
+                // given
+                val testMetaDataProviderConfig = object: MetaDataProviderConfig by AnidbConfig {
+                    override fun isTestContext(): Boolean = true
+                }
+
+                val testAppConfig = object : Config by TestAppConfig {
+                    override fun workingDir(metaDataProviderConfig: MetaDataProviderConfig): Directory = tempDir
+                }
+
+                val testIdRangeSelector = object: IdRangeSelector<Int> {
+                    override suspend fun idDownloadList(): List<Int> = listOf(1, 2, 3)
+                }
+
+                val successfulEntry = "successfully loaded content for"
+                val testAnimeDownloader = object: Downloader by TestDownloader {
+                    override suspend fun download(id: AnimeId, onDeadEntry: suspend (AnimeId) -> Unit): String {
+                        // Mirrors what FlaresolverrHttpClient raises when Cloudflare refused or stalled on
+                        // both the warmed-up session and the fresh one it then drew.
+                        if (id == "2") {
+                            throw IllegalStateException("FlareSolverr could not serve [anidb.net] - status [error], message [Error solving the challenge. Timeout after 240.0 seconds.].")
+                        }
+                        return "$successfulEntry $id"
+                    }
+                }
+
+                val crawler = AnidbCrawler(
+                    appConfig = testAppConfig,
+                    metaDataProviderConfig = testMetaDataProviderConfig,
+                    downloader = testAnimeDownloader,
+                    deadEntriesAccess = TestDeadEntriesAccessor,
+                    idRangeSelector = testIdRangeSelector,
+                    networkController = TestNetworkController,
+                )
+
+                // when
+                crawler.start()
+
+                // then
+                // Two different exit IPs failed on this one id, which on 2026-10-16 happened to ordinary
+                // pages (anidb 423, 4119, 8848, 16948). It costs itself and nothing else.
+                assertThat(tempDir.resolve("1.html").readFile()).isEqualTo("$successfulEntry 1")
+                assertThat(tempDir.resolve("3.html").readFile()).isEqualTo("$successfulEntry 3")
+                assertThat(tempDir.resolve("2.html")).doesNotExist()
+            }
+        }
+
+        @Test
+        fun `still throws for a failure which is not a recoverable FlareSolverr failure`() {
+            tempDirectory {
+                // given
+                val testMetaDataProviderConfig = object: MetaDataProviderConfig by AnidbConfig {
+                    override fun isTestContext(): Boolean = true
+                }
+
+                val testAppConfig = object : Config by TestAppConfig {
+                    override fun workingDir(metaDataProviderConfig: MetaDataProviderConfig): Directory = tempDir
+                }
+
+                val testIdRangeSelector = object: IdRangeSelector<Int> {
+                    override suspend fun idDownloadList(): List<Int> = listOf(1)
+                }
+
+                val testAnimeDownloader = object: Downloader by TestDownloader {
+                    override suspend fun download(id: AnimeId, onDeadEntry: suspend (AnimeId) -> Unit): String =
+                        throw IllegalStateException("something else went wrong")
+                }
+
+                val crawler = AnidbCrawler(
+                    appConfig = testAppConfig,
+                    metaDataProviderConfig = testMetaDataProviderConfig,
+                    downloader = testAnimeDownloader,
+                    deadEntriesAccess = TestDeadEntriesAccessor,
+                    idRangeSelector = testIdRangeSelector,
+                    networkController = TestNetworkController,
+                )
+
+                // when
+                val result = exceptionExpected<IllegalStateException> {
+                    crawler.start()
+                }
+
+                // then
+                // Tolerance is scoped to the two FlareSolverr failures a different exit IP could have fixed -
+                // anything else still aborts the run.
+                assertThat(result).hasMessage("something else went wrong")
+            }
+        }
+
+        @Test
         fun `throws an exception if a restart of the network controller didn't help`() {
             tempDirectory {
                 // given

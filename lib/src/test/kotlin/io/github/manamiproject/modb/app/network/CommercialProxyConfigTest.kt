@@ -185,6 +185,182 @@ internal class CommercialProxyConfigTest {
             // then
             assertThat(result).isEqualTo(""","proxy":{"url":"socks5://gw.example.com:7000","username":"us\"er","password":"pa\\ss"}""")
         }
+
+        @Test
+        fun `substitutes a fresh session id into the username`() {
+            // given
+            val config = CommercialProxyConfig(commercialRegistry(
+                url = "http://gw.example.com:7000",
+                username = "user-NAME-session-{session}",
+                password = "pass",
+            ))
+
+            // when
+            val result = config.proxyJson()
+
+            // then
+            assertThat(result).doesNotContain("{session}")
+            assertThat(result).containsPattern(""""username":"user-NAME-session-[a-z0-9]{8}"""")
+        }
+
+        @Test
+        fun `substitutes a fresh session id into the password, which is where IPRoyal puts it`() {
+            // given
+            val config = CommercialProxyConfig(commercialRegistry(
+                url = "http://geo.iproyal.com:12321",
+                username = "user",
+                password = "pass_session-{session}_lifetime-30m",
+            ))
+
+            // when
+            val result = config.proxyJson()
+
+            // then
+            assertThat(result).doesNotContain("{session}")
+            assertThat(result).containsPattern(""""password":"pass_session-[a-z0-9]{8}_lifetime-30m"""")
+        }
+
+        @Test
+        fun `uses the same id in both fields so a parameter spanning them stays consistent`() {
+            // given
+            val config = CommercialProxyConfig(commercialRegistry(
+                url = "http://gw.example.com:7000",
+                username = "user-{session}",
+                password = "pass-{session}",
+            ))
+
+            // when
+            val result = config.proxyJson()
+
+            // then
+            val ids = Regex("""(?:user|pass)-([a-z0-9]{8})""").findAll(result).map { it.groupValues[1] }.toList()
+            assertThat(ids).hasSize(2)
+            assertThat(ids[0]).isEqualTo(ids[1])
+        }
+
+        @Test
+        fun `generates a different id on every call, which is what makes a new session a new exit IP`() {
+            // given
+            val config = CommercialProxyConfig(commercialRegistry(
+                url = "http://gw.example.com:7000",
+                username = "user-{session}",
+                password = "pass",
+            ))
+
+            // when
+            val results = (1..25).map { config.proxyJson() }.toSet()
+
+            // then
+            // 36^8 possibilities, so 25 identical draws would not be chance.
+            assertThat(results).hasSizeGreaterThan(20)
+        }
+
+        @Test
+        fun `leaves credentials untouched when they carry no placeholder`() {
+            // given
+            val config = CommercialProxyConfig(commercialRegistry(
+                url = "http://gw.example.com:7000",
+                username = "user",
+                password = "pass",
+            ))
+
+            // when
+            val result = config.proxyJson()
+
+            // then
+            assertThat(result).isEqualTo(""","proxy":{"url":"http://gw.example.com:7000","username":"user","password":"pass"}""")
+        }
+    }
+
+    @Nested
+    inner class SessionRotationTests {
+
+        @Test
+        fun `rotateAfterRequests falls back to the default for an unlisted provider`() {
+            // given
+            val config = CommercialProxyConfig(commercialRegistry())
+
+            // when
+            val result = config.rotateAfterRequests("anidb.net")
+
+            // then
+            // A real default rather than 0: an unconfigured routed provider that silently never rotated would
+            // crawl everything from one exit IP, which is the failure the pool exists to prevent.
+            assertThat(result).isEqualTo(50)
+        }
+
+        @Test
+        fun `rotateAfterRequests is per provider`() {
+            // given
+            val config = CommercialProxyConfig(commercialRegistry(
+                providers = listOf("anidb.net", "other.example"),
+                rotateAfterRequests = listOf("anidb.net=50", "other.example=500"),
+            ))
+
+            // when / then
+            assertThat(config.rotateAfterRequests("anidb.net")).isEqualTo(50)
+            assertThat(config.rotateAfterRequests("other.example")).isEqualTo(500)
+            assertThat(config.rotateAfterRequests("unlisted.example")).isEqualTo(50)
+        }
+
+        @Test
+        fun `rotateAfterRequests of zero disables rotation for that provider only`() {
+            // given
+            val config = CommercialProxyConfig(commercialRegistry(
+                rotateAfterRequests = listOf("anidb.net=0"),
+            ))
+
+            // when / then
+            assertThat(config.rotateAfterRequests("anidb.net")).isZero()
+            assertThat(config.rotateAfterRequests("other.example")).isEqualTo(50)
+        }
+
+        @Test
+        fun `rotateAfterRequests strips a leading www and ignores hostname case`() {
+            // given
+            val config = CommercialProxyConfig(commercialRegistry(
+                rotateAfterRequests = listOf("AniDB.net=7"),
+            ))
+
+            // when / then
+            assertThat(config.rotateAfterRequests("www.anidb.net")).isEqualTo(7)
+        }
+
+        @Test
+        fun `rotateAfterRequests throws for a malformed entry`() {
+            // given
+            val config = CommercialProxyConfig(commercialRegistry(
+                rotateAfterRequests = listOf("anidb.net"),
+            ))
+
+            // when
+            val result = exceptionExpected<IllegalStateException> {
+                config.rotateAfterRequests("anidb.net")
+            }
+
+            // then
+            assertThat(result).hasMessageContaining("Expected 'hostname=limit'")
+        }
+
+        @Test
+        fun `rotatesSessionId is false without a placeholder`() {
+            // given
+            val config = CommercialProxyConfig(commercialRegistry(username = "user", password = "pass"))
+
+            // when / then
+            assertThat(config.rotatesSessionId()).isFalse()
+        }
+
+        @Test
+        fun `rotatesSessionId is true for a placeholder in either field`() {
+            // given
+            val inUsername = CommercialProxyConfig(commercialRegistry(username = "user-{session}", password = "pass"))
+            val inPassword = CommercialProxyConfig(commercialRegistry(username = "user", password = "pass-{session}"))
+
+            // when / then
+            assertThat(inUsername.rotatesSessionId()).isTrue()
+            assertThat(inPassword.rotatesSessionId()).isTrue()
+        }
     }
 
     @Nested
@@ -264,6 +440,7 @@ internal class CommercialProxyConfigTest {
 private fun commercialRegistry(
     enabled: Boolean? = null,
     flaresolverrPort: Int? = null,
+    rotateAfterRequests: List<String>? = null,
     providers: List<String>? = null,
     url: String? = null,
     username: String? = null,
@@ -279,5 +456,8 @@ private fun commercialRegistry(
     }
 
     @Suppress("UNCHECKED_CAST")
-    override fun <T : Any> list(key: String): List<T>? = providers as List<T>?
+    override fun <T : Any> list(key: String): List<T>? = when {
+        key.endsWith(".rotateAfterRequests") -> rotateAfterRequests as List<T>?
+        else -> providers as List<T>?
+    }
 }

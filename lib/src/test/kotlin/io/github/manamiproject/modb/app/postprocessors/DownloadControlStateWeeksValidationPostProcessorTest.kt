@@ -180,6 +180,96 @@ internal class DownloadControlStateWeeksValidationPostProcessorTest {
         }
 
         @Test
+        fun `returns true and ignores entries of a capped metadata provider although their next download is not set in the future`() {
+            runTest {
+                // given
+                // A capped provider refreshes only the first n ids due this week, so the ones it skipped keep
+                // a next-download week in the past by design. Validating them would abort every capped run at
+                // the final step, after the dataset has already been written.
+                val list = listOf(
+                    DownloadControlStateEntry(
+                        _weeksWihoutChange = 0,
+                        _lastDownloaded = WeekOfYear.currentWeek().minusWeeks(1),
+                        _nextDownload = WeekOfYear.currentWeek(),
+                        _anime = AnimeRaw(
+                            _title = "test1",
+                            _sources = hashSetOf(URI("https://capped.org/anime/1")),
+                        )
+                    ),
+                    DownloadControlStateEntry(
+                        _weeksWihoutChange = 0,
+                        _lastDownloaded = WeekOfYear.currentWeek(),
+                        _nextDownload = WeekOfYear.currentWeek().plusWeeks(1),
+                        _anime = AnimeRaw(
+                            _title = "test2",
+                            _sources = hashSetOf(URI("https://example.org/anime/2")),
+                        )
+                    ),
+                )
+
+                val testAppConfig = object: Config by TestAppConfig {
+                    override fun deactivatedMetaDataProviders(): Set<Hostname> = emptySet()
+                    override fun cappedMetaDataProviders(): Set<Hostname> = setOf("capped.org")
+                }
+
+                val testDownloadControlStateAccessor = object: DownloadControlStateAccessor by TestDownloadControlStateAccessor {
+                    override suspend fun allDcsEntries(): List<DownloadControlStateEntry> = list
+                }
+
+                val downloadControlStateWeeksValidator = DownloadControlStateWeeksValidationPostProcessor(
+                    appConfig = testAppConfig,
+                    downloadControlStateAccessor = testDownloadControlStateAccessor
+                )
+
+                // when
+                val result = downloadControlStateWeeksValidator.process()
+
+                // then
+                assertThat(result).isTrue()
+            }
+        }
+
+        @Test
+        fun `still validates entries of a metadata provider which has no cap`() {
+            runTest {
+                // given
+                val list = listOf(
+                    DownloadControlStateEntry(
+                        _weeksWihoutChange = 0,
+                        _lastDownloaded = WeekOfYear.currentWeek().minusWeeks(1),
+                        _nextDownload = WeekOfYear.currentWeek(),
+                        _anime = AnimeRaw(
+                            _title = "test1",
+                            _sources = hashSetOf(URI("https://example.org/anime/1")),
+                        )
+                    ),
+                )
+
+                val testAppConfig = object: Config by TestAppConfig {
+                    override fun deactivatedMetaDataProviders(): Set<Hostname> = emptySet()
+                    override fun cappedMetaDataProviders(): Set<Hostname> = setOf("capped.org")
+                }
+
+                val testDownloadControlStateAccessor = object: DownloadControlStateAccessor by TestDownloadControlStateAccessor {
+                    override suspend fun allDcsEntries(): List<DownloadControlStateEntry> = list
+                }
+
+                val downloadControlStateWeeksValidator = DownloadControlStateWeeksValidationPostProcessor(
+                    appConfig = testAppConfig,
+                    downloadControlStateAccessor = testDownloadControlStateAccessor
+                )
+
+                // when
+                val result = exceptionExpected<IllegalStateException> {
+                    downloadControlStateWeeksValidator.process()
+                }
+
+                // then
+                assertThat(result).hasMessage("Week for next download of [https://example.org/anime/1] is not set in the future.")
+            }
+        }
+
+        @Test
         fun `still validates entries of metadata provider which are not deactivated`() {
             // given
             val list = listOf(

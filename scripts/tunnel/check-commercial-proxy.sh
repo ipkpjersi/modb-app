@@ -83,7 +83,7 @@ echo "== 4. dedicated FlareSolverr container on port ${FLARESOLVERR_COMMERCIAL_P
 # published mapping shows as '127.0.0.1:8192->8191/tcp'.
 container="$(docker ps --filter "ancestor=${FLARESOLVERR_IMAGE_MATCH}" --format '{{.ID}} {{.Ports}}' 2>/dev/null | grep ":${FLARESOLVERR_COMMERCIAL_PORT}->" | awk '{print $1}' | head -1)"
 # 'ancestor' needs the image reference to match, and the real one is fully qualified
-# (ghcr.io/flaresolverr/flaresolverr:v3.5.0), so the filter above finds nothing in practice. Fall back to
+# (ghcr.io/flaresolverr/flaresolverr:v3.5.2), so the filter above finds nothing in practice. Fall back to
 # matching the image column, exactly as check-tunnel.sh does.
 if [ -z "$container" ]; then
     container="$(docker ps --format '{{.ID}} {{.Image}} {{.Ports}}' 2>/dev/null | grep -i "$FLARESOLVERR_IMAGE_MATCH" | grep ":${FLARESOLVERR_COMMERCIAL_PORT}->" | awk '{print $1}' | head -1)"

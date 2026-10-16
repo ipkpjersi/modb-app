@@ -74,6 +74,22 @@ class AppConfig(
         default = emptySet(),
     )
 
+    /**
+     * Per-provider entry caps as `hostname=limit` entries, for example `["anidb.net=100"]`. A provider which
+     * is not listed is uncapped. Per-provider rather than one global value because the limit is specific to
+     * the provider: anidb needs one, the API-backed provider(s) do not.
+     *
+     * A list of strings rather than a TOML map, because [DefaultConfigRegistry] flattens an inline table
+     * into individual dotted properties - so `maxEntriesPerRun = { "anidb.net" = 100 }` is stored as the
+     * property `modb.app.maxEntriesPerRun.anidb.net` and a map lookup on `modb.app.maxEntriesPerRun`
+     * returns `null`. A list is read back intact, exactly as `deactivatedMetaDataProviders` is.
+     */
+    private val maxEntriesPerRun: Set<String> by SetPropertyDelegate(
+        namespace = CONFIG_NAMESPACE,
+        configRegistry = configRegistry,
+        default = emptySet(),
+    )
+
     override fun downloadsDirectory(): Directory {
         val dir = Path(downloadsDirectory)
         check(dir.directoryExists()) { "Download directory set by 'downloadsDirectory' to [$downloadsDirectory] doesn't exist or is not a directory." }
@@ -143,6 +159,37 @@ class AppConfig(
         return deactivatedMetaDataProviders
     }
 
+    override fun maxEntriesPerRun(metaDataProviderConfig: MetaDataProviderConfig): Int =
+        validatedMaxEntriesPerRun()[metaDataProviderConfig.hostname()] ?: 0
+
+    override fun cappedMetaDataProviders(): Set<Hostname> =
+        validatedMaxEntriesPerRun().filterValues { it > 0 }.keys
+
+    /**
+     * Parses and validates the configured limits. Both accessors go through this, so a broken configuration
+     * is rejected no matter which of them is consulted first.
+     */
+    private fun validatedMaxEntriesPerRun(): Map<Hostname, Int> {
+        val limits = parseHostnameLimits("maxEntriesPerRun", maxEntriesPerRun)
+        val knownHostnames = metaDataProviderConfigurations().map { it.hostname() }.toSet()
+        val unknownHostnames = limits.keys - knownHostnames
+
+        check(unknownHostnames.isEmpty()) { "Unknown hostnames set by 'maxEntriesPerRun': [${unknownHostnames.sorted().joinToString(", ")}]." }
+
+        // A cap only takes effect for a crawler which resolves its whole id list up front. The paginating
+        // crawler(s) discover ids page by page and memorize the last completed page, so truncating them would
+        // risk recording a page as done that was not fully downloaded. Rejecting the configuration is far
+        // better than accepting a limit and silently not applying it, since the whole point of the limit is
+        // to bound spend on a metered or quota-limited provider.
+        val unsupportedHostnames = limits.keys - CAP_CAPABLE_HOSTNAMES
+
+        check(unsupportedHostnames.isEmpty()) {
+            "'maxEntriesPerRun' is not supported for [${unsupportedHostnames.sorted().joinToString(", ")}] - only [${CAP_CAPABLE_HOSTNAMES.sorted().joinToString(", ")}] resolve their id list up front and can honor a cap."
+        }
+
+        return limits
+    }
+
     override fun deactivatedCommercialMetaDataProviders(): Set<Hostname> {
         val knownHostnames = metaDataProviderConfigurations().map { it.hostname() }.toSet()
         val unknownHostnames = deactivatedCommercialMetaDataProviders - knownHostnames
@@ -158,6 +205,19 @@ class AppConfig(
          * @since 1.0.0
          */
         const val CONFIG_NAMESPACE = "modb.app"
+
+        /**
+         * Hostnames whose crawler builds its download list through
+         * [io.github.manamiproject.modb.app.crawlers.CappedIdRangeSelector] and can therefore honor
+         * `maxEntriesPerRun`. Kept here rather than imported from the crawler package to avoid a dependency
+         * from config back onto crawlers; keep the two in step when a crawler is wired or unwired.
+         */
+        private val CAP_CAPABLE_HOSTNAMES = setOf(
+            "anidb.net",
+            "anilist.co",
+            "kitsu.app",
+            "myanimelist.net",
+        )
 
         /**
          * Singleton of [AppConfig]

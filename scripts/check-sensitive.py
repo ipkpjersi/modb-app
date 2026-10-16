@@ -98,7 +98,9 @@ SECRET_ASSIGN = re.compile(
     """
 )
 SECRET_PLACEHOLDER = re.compile(
-    r"^[\s.<$*]|\.\.\.|example|placeholder|changeme|dummy|redacted|your[_-]|xxx|\$\{", re.IGNORECASE
+    # '{session}' is CommercialProxyConfig's own substitution token, so a credential carrying it is a
+    # template rather than a real secret.
+    r"^[\s.<$*]|\.\.\.|example|placeholder|changeme|dummy|redacted|your[_-]|xxx|\$\{|\{session\}", re.IGNORECASE
 )
 
 FORBIDDEN_PATHS = re.compile(

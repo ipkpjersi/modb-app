@@ -7,7 +7,9 @@ import io.github.manamiproject.modb.core.config.Hostname
 import io.github.manamiproject.modb.core.config.IntPropertyDelegate
 import io.github.manamiproject.modb.core.config.SetPropertyDelegate
 import io.github.manamiproject.modb.core.config.StringPropertyDelegate
+import io.github.manamiproject.modb.app.config.parseHostnameLimits
 import io.github.manamiproject.modb.core.extensions.EMPTY
+import io.github.manamiproject.modb.core.logging.LoggerDelegate
 
 /**
  * Configuration for a commercial rotating residential proxy served by a dedicated second FlareSolverr
@@ -35,6 +37,18 @@ import io.github.manamiproject.modb.core.extensions.EMPTY
  * `socks5://` [url] carrying credentials fails at the SOCKS handshake and surfaces as a connection error
  * rather than an auth error. Use IP whitelisting, the provider's HTTP endpoint, or a local authless shim
  * instead - see `scripts/tunnel/README.md`.
+ *
+ * **Session rotation.** A provider cannot tell that a new FlareSolverr session has begun, because every
+ * session presents the same credentials. It keeps serving whatever exit IP that credential string is bound
+ * to, so recreating the session on its own buys nothing. Rotation therefore has to be expressed in the
+ * credentials: put [SESSION_PLACEHOLDER] wherever the provider's own sticky-session parameter goes and a
+ * fresh random id is substituted on every [proxyJson] call, which is once per session creation. Combined
+ * with [rotateAfterRequests] that yields one fresh residential IP per batch of entries, which is what beats
+ * a per-IP daily quota without re-solving the Cloudflare challenge on every single request.
+ *
+ * The parameter's spelling differs per provider, so the placeholder goes in whichever field that provider
+ * documents, for example `user-NAME-session-{session}` as a [username] or
+ * `pass_session-{session}_lifetime-30m` as a [password].
  *
  * **Default** is disabled so a host without a commercial proxy behaves exactly as before.
  *
@@ -82,6 +96,21 @@ class CommercialProxyConfig(
     )
 
     /**
+     * Per-provider rotation thresholds as `hostname=limit` entries, for example `["anidb.net=50"]`. A
+     * provider which is not listed uses [DEFAULT_ROTATE_AFTER_REQUESTS]; `hostname=0` disables rotation for
+     * that provider and keeps one session for the whole run.
+     *
+     * Per-provider because the binding limit belongs to the target site, not to the proxy: anidb allows only
+     * ~100-200 requests per IP per day, while another site might tolerate hundreds.
+     * @since 1.15.0
+     */
+    private val rotateAfterRequests: Set<String> by SetPropertyDelegate(
+        namespace = CONFIG_NAMESPACE,
+        default = emptySet(),
+        configRegistry = configRegistry,
+    )
+
+    /**
      * Proxy endpoint URL, for example `socks5://gateway.example.com:7000`. Secret in practice, so it belongs
      * in the gitignored `config.toml`, never in source. **Default** is empty.
      * @since 1.15.0
@@ -120,22 +149,67 @@ class CommercialProxyConfig(
      * @param hostname Hostname of a metadata provider.
      * @return `true` if traffic for [hostname] must be routed through the commercial proxy.
      */
+    /**
+     * Number of requests one FlareSolverr session serves for [hostname] before it is destroyed and
+     * recreated, which draws a fresh exit IP when the credentials carry [SESSION_PLACEHOLDER].
+     *
+     * Sized against two opposing costs. Too high and a batch exhausts the provider's per-IP daily quota. Too
+     * low and each short-lived session pays the full Cloudflare solve again (~19s against ~2-4s on a reused
+     * session), so rotating every request would cost days across anidb's 15,000-odd entries.
+     *
+     * @since 1.15.0
+     * @param hostname Hostname of a metadata provider.
+     * @return Requests per session, or `0` to never rotate.
+     */
+    fun rotateAfterRequests(hostname: Hostname): Int =
+        parseHostnameLimits("$CONFIG_NAMESPACE.rotateAfterRequests", rotateAfterRequests)[
+            hostname.lowercase().removePrefix("www.")
+        ] ?: DEFAULT_ROTATE_AFTER_REQUESTS
+
     fun isRouted(hostname: Hostname): Boolean =
         enabled && providersForCommercialProxy.contains(hostname.lowercase().removePrefix("www."))
+
+    /**
+     * Whether the credentials carry [SESSION_PLACEHOLDER], and therefore whether recreating a FlareSolverr
+     * session actually draws a new exit IP.
+     * @since 1.15.0
+     * @return `true` if a fresh session id is substituted into the credentials on each [proxyJson] call.
+     */
+    /**
+     * A fresh session id, for a caller which needs to log it as well as send it.
+     * @since 1.15.0
+     * @return A random 8-character lowercase alphanumeric session id.
+     */
+    fun newSessionId(): String = randomSessionId()
+
+    fun rotatesSessionId(): Boolean =
+        username.contains(SESSION_PLACEHOLDER) || password.contains(SESSION_PLACEHOLDER)
 
     /**
      * The `proxy` fragment appended to a FlareSolverr `sessions.create` body, including the leading comma.
      * Credentials are included only when both are present. FlareSolverr's structured `username`/`password`
      * fields are used rather than embedding `user:pass@` in the URL, so credentials do not need URL encoding.
      *
+     * Every [SESSION_PLACEHOLDER] in the credentials is replaced with the SAME freshly generated id, so a
+     * provider whose parameter spans both fields stays consistent. Because this is called once per session
+     * creation, each new session presents a credential string the provider has not seen before and is given
+     * a new exit IP from the pool.
+     *
      * Values are JSON-escaped so a password containing a quote or backslash cannot break the request body.
      * @since 1.15.0
+     * @param sessionId Session id to substitute. Defaults to a fresh one from [newSessionId]; pass an
+     * explicit one when it also has to be logged, so the log and the request cannot disagree.
      * @return The proxy fragment, for example `,"proxy":{"url":"..."}`.
      */
-    fun proxyJson(): String = when {
-        username.isNotBlank() && password.isNotBlank() ->
-            ""","proxy":{"url":"${jsonEscape(url)}","username":"${jsonEscape(username)}","password":"${jsonEscape(password)}"}"""
-        else -> ""","proxy":{"url":"${jsonEscape(url)}"}"""
+    fun proxyJson(sessionId: String = newSessionId()): String {
+        val user = username.replace(SESSION_PLACEHOLDER, sessionId)
+        val pass = password.replace(SESSION_PLACEHOLDER, sessionId)
+
+        return when {
+            user.isNotBlank() && pass.isNotBlank() ->
+                ""","proxy":{"url":"${jsonEscape(url)}","username":"${jsonEscape(user)}","password":"${jsonEscape(pass)}"}"""
+            else -> ""","proxy":{"url":"${jsonEscape(url)}"}"""
+        }
     }
 
     /**
@@ -154,10 +228,57 @@ class CommercialProxyConfig(
         check(username.isBlank() == password.isBlank()) {
             "$CONFIG_NAMESPACE.username and $CONFIG_NAMESPACE.password must be set together (both or neither)."
         }
+
+        // Neither case is fatal - the crawl still works - but both mean the operator almost certainly did not
+        // get the rotation they intended, and silently crawling a 14,517-entry seed on a single IP is
+        // expensive to discover late.
+        val thresholds = providersForCommercialProxy.associateWith { rotateAfterRequests(it) }
+        val rotating = thresholds.filterValues { it > 0 }.keys
+
+        if (rotating.isNotEmpty() && !rotatesSessionId()) {
+            log.warn {
+                "$CONFIG_NAMESPACE.rotateAfterRequests would rotate [${rotating.sorted().joinToString(", ")}] but neither username nor password contains '$SESSION_PLACEHOLDER', so every session presents the same credentials. Whether a recreated session gets a new exit IP is then entirely up to the provider's gateway."
+            }
+        }
+        if (rotating.isEmpty() && rotatesSessionId()) {
+            log.warn {
+                "$CONFIG_NAMESPACE.username/password contain '$SESSION_PLACEHOLDER' but no routed provider has a rotation threshold above 0, so the session is never recreated and the exit IP never changes."
+            }
+        }
     }
 
     companion object {
+        private val log by LoggerDelegate()
+
         private const val CONFIG_NAMESPACE = "modb.app.proxy.commercial"
+
+        /**
+         * Rotation threshold for a routed provider which is not listed in `rotateAfterRequests`. Deliberately
+         * a real value rather than `0`: an unconfigured routed provider silently never rotating would run a
+         * whole crawl from one exit IP, which is the failure the pool exists to avoid.
+         * @since 1.15.0
+         */
+        const val DEFAULT_ROTATE_AFTER_REQUESTS: Int = 50
+
+        /**
+         * Token replaced with a freshly generated session id wherever it appears in [username] or
+         * [password]. Not any provider's own syntax - it marks the spot inside whichever parameter that
+         * provider documents, because the spelling is not standardised across providers.
+         * @since 1.15.0
+         */
+        const val SESSION_PLACEHOLDER: String = "{session}"
+
+        /**
+         * Lowercase alphanumerics only, and exactly [SESSION_ID_LENGTH] of them. That is the intersection of
+         * what the providers accept: IPRoyal documents an exactly-8-character alphanumeric session id, while
+         * the others take an arbitrary string, so an 8-character alphanumeric id is valid everywhere.
+         */
+        private const val SESSION_ID_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789"
+        private const val SESSION_ID_LENGTH = 8
+
+        private fun randomSessionId(): String = (1..SESSION_ID_LENGTH)
+            .map { SESSION_ID_ALPHABET.random() }
+            .joinToString(EMPTY)
 
         private fun jsonEscape(value: String): String = value
             .replace("\\", "\\\\")

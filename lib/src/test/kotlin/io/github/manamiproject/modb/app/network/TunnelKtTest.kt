@@ -390,6 +390,11 @@ private fun commercialRegistry(
     override fun int(key: String): Int? = null
     override fun string(key: String): String? = if (key.endsWith(".url")) url else null
 
+    // Scoped by key: 'providers' and 'rotateAfterRequests' are both lists, and feeding the provider names
+    // into the limit parser fails with "Expected 'hostname=limit'".
     @Suppress("UNCHECKED_CAST")
-    override fun <T : Any> list(key: String): List<T>? = providers as List<T>?
+    override fun <T : Any> list(key: String): List<T>? = when {
+        key.endsWith(".providersForCommercialProxy") -> providers as List<T>?
+        else -> null
+    }
 }

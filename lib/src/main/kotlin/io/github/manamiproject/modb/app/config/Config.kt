@@ -101,6 +101,36 @@ interface Config: ContextAware {
     fun deactivatedCommercialMetaDataProviders(): Set<Hostname> = emptySet()
 
     /**
+     * Maximum number of entries a single run may download for a metadata provider, or `0` for no limit.
+     *
+     * Exists for provider(s) whose budget is consumed per request rather than per unit of time: anidb
+     * enforces a per-IP daily quota, and a commercial proxy bills per gigabyte, so "crawl everything due"
+     * is the wrong default there. A capped run stops cleanly having downloaded the first [maxEntriesPerRun]
+     * ids, and the remainder are picked up by the next run - download control state already makes the work
+     * resumable.
+     *
+     * **Default** is `0` for every provider, so an unconfigured host behaves exactly as before.
+     * @since 1.15.0
+     * @param metaDataProviderConfig Configuration of the metadata provider.
+     * @return Maximum entries to download in this run, or `0` for unlimited.
+     */
+    fun maxEntriesPerRun(metaDataProviderConfig: MetaDataProviderConfig): Int = 0
+
+    /**
+     * Hostnames of the metadata provider(s) which have a [maxEntriesPerRun] limit.
+     *
+     * A capped provider refreshes only the first n of the ids due this week, so the rest keep a
+     * next-download week in the past by design - which is why
+     * [io.github.manamiproject.modb.app.postprocessors.DownloadControlStateWeeksValidationPostProcessor]
+     * has to skip them, exactly as it skips [deactivatedMetaDataProviders].
+     *
+     * **Default** is empty.
+     * @since 1.15.0
+     * @return Hostnames of the provider(s) with an entry limit configured.
+     */
+    fun cappedMetaDataProviders(): Set<Hostname> = emptySet()
+
+    /**
      * Finds a specific [MetaDataProviderConfig] for a given hostname.
      * @since 1.0.0
      * @param host Hostname of a metadata provider

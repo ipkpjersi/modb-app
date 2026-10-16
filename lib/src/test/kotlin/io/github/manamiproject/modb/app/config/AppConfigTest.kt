@@ -889,4 +889,162 @@ internal class AppConfigTest {
             }
         }
     }
+
+    @Nested
+    inner class MaxEntriesPerRunTests {
+
+        @Test
+        fun `returns 0 if the config property is not set`() {
+            // given
+            val appConfig = AppConfig(configRegistry = capRegistry(null))
+
+            // when
+            val result = appConfig.maxEntriesPerRun(AnidbConfig)
+
+            // then
+            assertThat(result).isZero()
+        }
+
+        @Test
+        fun `returns the configured limit for the requested provider`() {
+            // given
+            val appConfig = AppConfig(configRegistry = capRegistry(listOf("anidb.net=100")))
+
+            // when
+            val result = appConfig.maxEntriesPerRun(AnidbConfig)
+
+            // then
+            assertThat(result).isEqualTo(100)
+        }
+
+        @Test
+        fun `returns 0 for a provider which is not listed`() {
+            // given
+            val appConfig = AppConfig(configRegistry = capRegistry(listOf("anidb.net=100")))
+
+            // when
+            val result = appConfig.maxEntriesPerRun(KitsuConfig)
+
+            // then
+            assertThat(result).isZero()
+        }
+
+        @Test
+        fun `tolerates surrounding whitespace and uppercase in the hostname`() {
+            // given
+            val appConfig = AppConfig(configRegistry = capRegistry(listOf(" AniDB.net = 100 ")))
+
+            // when
+            val result = appConfig.maxEntriesPerRun(AnidbConfig)
+
+            // then
+            assertThat(result).isEqualTo(100)
+        }
+
+        @Test
+        fun `accepts a limit of zero as explicitly uncapped`() {
+            // given
+            val appConfig = AppConfig(configRegistry = capRegistry(listOf("anidb.net=0")))
+
+            // when
+            val result = appConfig.maxEntriesPerRun(AnidbConfig)
+
+            // then
+            assertThat(result).isZero()
+        }
+
+        @Test
+        fun `throws for an unknown hostname`() {
+            // given
+            val appConfig = AppConfig(configRegistry = capRegistry(listOf("example.org=100")))
+
+            // when
+            val result = exceptionExpected<IllegalStateException> {
+                appConfig.maxEntriesPerRun(AnidbConfig)
+            }
+
+            // then
+            assertThat(result).hasMessage("Unknown hostnames set by 'maxEntriesPerRun': [example.org].")
+        }
+
+        @Test
+        fun `throws for a provider whose crawler cannot honor a cap`() {
+            // given
+            // anisearch paginates, so it never resolves a full id list up front. Accepting the value and
+            // quietly ignoring it would defeat the purpose of configuring a spend limit at all.
+            val appConfig = AppConfig(configRegistry = capRegistry(listOf("anisearch.com=100")))
+
+            // when
+            val result = exceptionExpected<IllegalStateException> {
+                appConfig.maxEntriesPerRun(AnidbConfig)
+            }
+
+            // then
+            assertThat(result).hasMessageStartingWith("'maxEntriesPerRun' is not supported for [anisearch.com]")
+        }
+
+        @Test
+        fun `throws for a malformed entry`() {
+            // given
+            val appConfig = AppConfig(configRegistry = capRegistry(listOf("anidb.net")))
+
+            // when
+            val result = exceptionExpected<IllegalStateException> {
+                appConfig.maxEntriesPerRun(AnidbConfig)
+            }
+
+            // then
+            assertThat(result).hasMessage("Malformed entry in 'maxEntriesPerRun': [anidb.net]. Expected 'hostname=limit'.")
+        }
+
+        @Test
+        fun `throws for a non-numeric limit`() {
+            // given
+            val appConfig = AppConfig(configRegistry = capRegistry(listOf("anidb.net=lots")))
+
+            // when
+            val result = exceptionExpected<IllegalStateException> {
+                appConfig.maxEntriesPerRun(AnidbConfig)
+            }
+
+            // then
+            assertThat(result).hasMessage("Non-numeric limit in 'maxEntriesPerRun' entry: [anidb.net=lots].")
+        }
+
+        @Test
+        fun `throws for a negative limit`() {
+            // given
+            val appConfig = AppConfig(configRegistry = capRegistry(listOf("anidb.net=-5")))
+
+            // when
+            val result = exceptionExpected<IllegalStateException> {
+                appConfig.maxEntriesPerRun(AnidbConfig)
+            }
+
+            // then
+            assertThat(result).hasMessage("Negative limit in 'maxEntriesPerRun' entry: [anidb.net=-5].")
+        }
+
+        @Test
+        fun `throws for a duplicate hostname`() {
+            // given
+            val appConfig = AppConfig(configRegistry = capRegistry(listOf("anidb.net=100", "anidb.net=200")))
+
+            // when
+            val result = exceptionExpected<IllegalStateException> {
+                appConfig.maxEntriesPerRun(AnidbConfig)
+            }
+
+            // then
+            assertThat(result).hasMessage("Duplicate hostname in 'maxEntriesPerRun': [anidb.net].")
+        }
+    }
+}
+
+/**
+ * A [ConfigRegistry] supplying only the `maxEntriesPerRun` list, which is all these tests read.
+ */
+private fun capRegistry(entries: List<String>?) = object : ConfigRegistry by TestConfigRegistry {
+    @Suppress("UNCHECKED_CAST")
+    override fun <T : Any> list(key: String): List<T>? = entries as List<T>?
 }

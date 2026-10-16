@@ -122,6 +122,38 @@ sudo cp sockd.conf /etc/danted.conf
 sudo systemctl enable --now danted
 ```
 
+**Then add this drop-in. It is not optional.** Dante binds its external address at startup and exits if the
+address is not there yet, with no retry - so it loses any race against DHCP and stays dead until someone
+notices. That is not hypothetical: it happened on 2026-10-14, almost certainly when a `dante-server` package
+upgrade restarted the service before the interface had its lease, and the tunnel was silently down for two
+days. The signature in `systemctl status danted` is a `Duration:` of a few tens of milliseconds plus:
+
+```
+warning: addrisbindable(): cannot bind address: <ip> ... Cannot assign requested address
+error: checkconfig(): cannot bind external address #0: <ip>
+alert: mother[1/1]: shutting down
+```
+
+```bash
+sudo mkdir -p /etc/systemd/system/danted.service.d
+printf '[Unit]\nWants=network-online.target\nAfter=network-online.target\n\n[Service]\nRestart=on-failure\nRestartSec=5\n' \
+  | sudo tee /etc/systemd/system/danted.service.d/override.conf
+sudo systemctl daemon-reload
+sudo systemctl restart danted
+systemctl status danted --no-pager | head -15
+```
+
+`network-online.target` waits for an actual address rather than just the network stack. `Restart=on-failure`
+is the line that really matters: ordering alone is never fully reliable with DHCP, so the retry is what keeps
+a lost race from becoming days of downtime. A drop-in is used rather than editing the shipped unit so a
+package upgrade cannot discard it - and note that the upgrade which caused this also printed "The unit file
+... changed on disk", so editing the unit directly would have been undone.
+
+Diagnosing this from the crawl server is misleading in a specific way, so it is worth knowing the pattern:
+`check-tunnel.sh` check 1 **passes** (the `ssh -R` listener is still bound on the server, and autossh keeps
+reconnecting) and check 4 **passes** (the container can reach that listener), while only check 2 fails. A
+bound port with no traffic through it means the far end of the forward is dead, not the tunnel itself.
+
 ### 3. Home: hold the tunnel up
 
 ```
@@ -271,6 +303,75 @@ preference:
 `socks5://` + credentials setup authenticates fine under curl and still fails inside FlareSolverr. Check 4
 only confirms the container is running, not that the browser can authenticate through the proxy.
 
+### Terminology
+
+The vocabulary here is not standardised, and vendors, blogs and LLMs each use different words for the same
+two or three things. What this repository means by them:
+
+| term used here | definition |
+| --- | --- |
+| **sticky session** | the provider holding one exit IP for you until a label or timer expires |
+| **session ID** | an arbitrary label you invent, which the provider maps to an exit IP |
+| **session rotation** | our client-side pattern of discarding a session on purpose to draw a new IP |
+
+**Vendor-canonical names**, i.e. what actually finds the right documentation page:
+
+* **sticky session** / **sticky IP** - universal across all five providers
+* **session ID** / **session parameter** / **session token** - the label
+* **session control** - Oxylabs' heading for the whole feature
+  ([Session Control & IP Rotation](https://developers.oxylabs.io/products/proxies/residential-proxies/session-control))
+* **username parameters** / **authentication parameters** - how the label is transmitted
+* **session duration** / **session lifetime** / **session TTL** - how long a sticky IP is held
+* **rotating vs sticky sessions** - the two modes
+
+**Colloquial aliases** you will hear, none of which appear verbatim in vendor documentation. Recorded here
+only so they are recognisable, not recommended for searching:
+
+* *dynamic session steering*
+* *dynamic session control*
+* *parameter steering* / *credential parameter steering*
+
+Note that **dynamic** is a legitimate term in this space, but it describes the *product category* - a
+"dynamic residential proxy" is a rotating residential proxy, as opposed to a static/ISP one. It is not part
+of the name of the session mechanism, which is where the confusion comes from. The accurate long-form
+description of this setup is: *a dynamic (rotating) residential proxy, using sticky sessions with a session
+ID that we rotate per batch.*
+
+### Session rotation: how a fresh exit IP is actually obtained
+
+A rotating pool does nothing on its own. **The provider cannot tell that a new FlareSolverr session has
+begun**, because every session presents the same credentials, so it keeps serving whatever exit IP that
+credential string is bound to. Destroying and recreating the session changes nothing by itself.
+
+Rotation has to be expressed **in the credentials**. Put the literal token `{session}` wherever the provider
+documents its own sticky-session parameter, and a fresh random 8-character alphanumeric id is substituted
+each time a session is created. Each new session then looks like a new client and is given a new residential
+IP. The id is 8 alphanumerics because that is the intersection of what the providers accept - IPRoyal
+requires exactly 8, the others take anything.
+
+The parameter's spelling differs per provider:
+
+| provider | where the parameter goes |
+| --- | --- |
+| IPRoyal | the **password**: `REALPASS_session-{session}_lifetime-30m` |
+| Decodo | the **username**: `user-REALUSER-session-{session}` |
+| Webshare / DataImpulse | username-parameter style; confirm the spelling in their dashboard |
+
+`rotateAfterRequests` (default `50`) is how many requests one session serves before being recycled. It
+trades the two failure modes against each other:
+
+* **Too high** and the batch burns through anidb's per-IP daily quota (~100-200).
+* **Too low** and every short-lived session pays the full Cloudflare solve again, ~19s against ~1.5s on a
+  reused session. Rotating per request would cost roughly 77 hours across anidb's 14,517 entries.
+
+`0` disables rotation. Only commercially-routed provider(s) are recycled - a tunneled provider never is,
+since the tunnel has one home IP and recycling would discard a valid Cloudflare clearance for nothing.
+
+A mismatched configuration is not fatal but logs a WARN at startup: `rotateAfterRequests` set with no
+`{session}` in the credentials, or `{session}` present with `rotateAfterRequests = 0`. Watch for those on
+the first run, because the failure they describe - a whole seed crawled from one IP - is expensive to notice
+late.
+
 ### Setup
 
 1. **Start the second container** (or let the app start it on the next run - it reuses one already running,
@@ -278,7 +379,7 @@ only confirms the container is running, not that the browser can authenticate th
 
    ```bash
    sudo docker run -p 127.0.0.1:8192:8191 -d --restart unless-stopped \
-     --name flaresolverr-commercial ghcr.io/flaresolverr/flaresolverr:v3.5.0
+     --name flaresolverr-commercial ghcr.io/flaresolverr/flaresolverr:v3.5.2
    ```
 
    No proxy settings go on the container - the proxy is passed per session by the app, so this container is

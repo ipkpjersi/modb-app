@@ -7,6 +7,7 @@ import io.github.manamiproject.modb.anidb.AnidbResponseChecker
 import io.github.manamiproject.modb.anidb.CrawlerDetectedException
 import io.github.manamiproject.modb.app.config.AppConfig
 import io.github.manamiproject.modb.app.config.Config
+import io.github.manamiproject.modb.app.crawlers.CappedIdRangeSelector
 import io.github.manamiproject.modb.app.crawlers.Crawler
 import io.github.manamiproject.modb.app.crawlers.IdRangeSelector
 import io.github.manamiproject.modb.app.crawlers.IntegerBasedIdRangeSelector
@@ -55,9 +56,12 @@ class AnidbCrawler(
     private val appConfig: Config = AppConfig.instance,
     private val metaDataProviderConfig: MetaDataProviderConfig = AnidbConfig,
     private val deadEntriesAccess: DeadEntriesAccessor = DefaultDeadEntriesAccessor.instance,
-    private val idRangeSelector: IdRangeSelector<Int> = IntegerBasedIdRangeSelector(
+    private val idRangeSelector: IdRangeSelector<Int> = CappedIdRangeSelector(
         metaDataProviderConfig = metaDataProviderConfig,
-        highestIdDetector = AnidbHighestIdDetector.instance,
+        delegate = IntegerBasedIdRangeSelector(
+            metaDataProviderConfig = metaDataProviderConfig,
+            highestIdDetector = AnidbHighestIdDetector.instance,
+        ),
     ),
     private val httpClient: HttpClient = SuspendableHttpClient(httpClient = flaresolverrHttpClientFor(metaDataProviderConfig.hostname())),
     private val downloader: Downloader = AnidbDownloader(
@@ -110,7 +114,22 @@ class AnidbCrawler(
         log.info { "Finished crawling data for [${metaDataProviderConfig.hostname()}]." }
     }
 
-    private suspend fun startDownload(idDownloadList: List<Int>) = repeat(idDownloadList.size) { index ->
+    private suspend fun startDownload(idDownloadList: List<Int>) {
+        val skipped = mutableListOf<Int>()
+
+        repeat(idDownloadList.size) { index ->
+            downloadOne(idDownloadList, index, skipped)
+        }
+
+        // A single slow or unsolvable page must not cost the rest of the run. Reported together at the end so
+        // the count is visible rather than buried thousands of lines up, and left un-downloaded on purpose:
+        // their DCS week stays in the past, so the next run picks them up again.
+        if (skipped.isNotEmpty()) {
+            log.error { "Skipped [${skipped.size}] entr(ies) for [${metaDataProviderConfig.hostname()}] which could not be downloaded even after a retry on a fresh session: $skipped. They keep a download week in the past and are retried by the next run." }
+        }
+    }
+
+    private suspend fun downloadOne(idDownloadList: List<Int>, index: Int, skipped: MutableList<Int>) {
         val animeId = idDownloadList[index]
         wait()
 
@@ -121,8 +140,8 @@ class AnidbCrawler(
                 deadEntriesAccess.addDeadEntry(it, metaDataProviderConfig)
             }
         } catch (e: Throwable) {
-            when(e) {
-                is CrawlerDetectedException -> {
+            when {
+                e is CrawlerDetectedException -> {
                     when {
                         // AntiLeech flagged the tunnel/proxy exit IP, which this host cannot rotate. Back off
                         // instead, which is the only lever left: on a rotating pool the pause is also what
@@ -138,6 +157,16 @@ class AnidbCrawler(
                     AnidbResponseChecker(response).checkIfCrawlerIsDetected()
                     response
                 }
+                // FlaresolverrHttpClient has already retried this once on a fresh session, and the session
+                // it started from had cleared Cloudflare during warm-up, so two separate exit IPs failed on
+                // this one entry. A page can simply be slow too - anidb/3509 needs ~117s of Cloudflare
+                // solving - and losing a whole multi-hour seed to one of those is worse than missing it. The
+                // entry is recorded and skipped; it is NOT marked done, so the next run retries it.
+                isRecoverableFlaresolverrFailure(e) -> {
+                    log.error { "Could not download [${metaDataProviderConfig.hostname()}] id [$animeId] even after a retry on a fresh session - skipping it for this run. [${e.message}]" }
+                    skipped.add(animeId)
+                    return
+                }
                 else -> throw e
             }
         }
@@ -152,6 +181,24 @@ class AnidbCrawler(
                 response.writeToFile(pendingFile, true)
             }
         }
+    }
+
+    /**
+     * Whether [throwable] is a FlareSolverr failure which costs this one entry rather than the run: the hard
+     * wall-clock cap on an operation, or a challenge which could not be cleared on two different exit IPs.
+     *
+     * Matched on the message because neither arrives as a distinct type. The cap in particular is deliberately
+     * converted from FlareSolverr's TimeoutCancellationException into a plain exception - as a
+     * CancellationException it would cancel this crawler silently, the run would carry on and publish a dataset
+     * built from a truncated crawl, which is what happened on 2026-10-16 (anidb stopped at 2,057 of 15,454
+     * entries with no error).
+     */
+    private fun isRecoverableFlaresolverrFailure(throwable: Throwable): Boolean {
+        val message: String = throwable.message ?: return false
+
+        return (message.contains("FlareSolverr operation", ignoreCase = true)
+                && message.contains("exceeded", ignoreCase = true))
+                || message.contains("FlareSolverr could not serve", ignoreCase = true)
     }
 
     @KoverIgnore
