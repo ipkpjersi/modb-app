@@ -22,10 +22,18 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
+import java.io.IOException
+import java.net.InetAddress
+import java.net.InetSocketAddress
+import java.net.Proxy
+import java.net.Proxy.Type.HTTP
+import java.net.ServerSocket
+import java.net.Socket
 import java.net.SocketTimeoutException
 import java.net.URI
 import java.net.URL
 import java.net.UnknownHostException
+import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.TimeUnit.MILLISECONDS
 import java.util.concurrent.TimeUnit.SECONDS
 import kotlin.reflect.KClass
@@ -64,6 +72,102 @@ private fun responseWithBodyThatTimesOutOnRead(url: URL): Response = Response.Bu
         }.buffer()
     })
     .build()
+
+private fun rawHttpResponse(statusLine: String, headers: List<String>, body: String): String =
+    (listOf(statusLine) + headers + listOf(
+        "Content-Length: ${body.toByteArray().size}",
+        "Connection: close",
+        EMPTY,
+        body,
+    )).joinToString("\r\n")
+
+// Minimal HTTP proxy on the loopback interface which records the credentials of every request it receives.
+// WIREMOCK answers HTTP 400 to the absolute request URI a proxy is sent ("GET http://host/path HTTP/1.1"
+// instead of "GET /path HTTP/1.1"), so the HTTP 407 handshake is verified against a plain server socket.
+private class AuthenticatingProxy(
+    private val expectedCredentials: String,
+    private val rejectValidCredentials: Boolean = false,
+) : AutoCloseable {
+
+    private val serverSocket = ServerSocket(0, 0, InetAddress.getLoopbackAddress())
+    private val acceptLoop = Thread { acceptUntilClosed() }
+
+    /** Credentials of each received request in the order they arrived, [EMPTY] for a request without any. */
+    val receivedCredentials = CopyOnWriteArrayList<String>()
+
+    /** Request line of each received request, which is in absolute form for a proxied request. */
+    val requestLines = CopyOnWriteArrayList<String>()
+
+    val proxy: Proxy = Proxy(HTTP, InetSocketAddress(InetAddress.getLoopbackAddress(), serverSocket.localPort))
+
+    init {
+        acceptLoop.isDaemon = true
+        acceptLoop.start()
+    }
+
+    override fun close() {
+        serverSocket.close()
+        acceptLoop.join(SHUTDOWN_TIMEOUT_IN_MILLISECONDS)
+    }
+
+    private fun acceptUntilClosed() {
+        while (!serverSocket.isClosed) {
+            try {
+                serverSocket.accept().use { answer(it) }
+            } catch (_: IOException) {
+                return // closing the server socket is the only way out of this loop
+            }
+        }
+    }
+
+    private fun answer(socket: Socket) {
+        val reader = socket.getInputStream().bufferedReader()
+        val requestLine = reader.readLine() ?: return
+        var credentials = EMPTY
+
+        while (true) {
+            val header = reader.readLine()
+
+            if (header.isNullOrBlank()) {
+                break
+            }
+
+            if (header.startsWith("$PROXY_AUTHORIZATION_HEADER:", ignoreCase = true)) {
+                credentials = header.substringAfter(':').trim()
+            }
+        }
+
+        requestLines.add(requestLine)
+        receivedCredentials.add(credentials)
+
+        val response = when {
+            rejectValidCredentials || credentials != expectedCredentials -> CHALLENGE
+            else -> SUCCESS
+        }
+
+        socket.getOutputStream().apply {
+            write(response.toByteArray())
+            flush()
+        }
+    }
+
+    private companion object {
+        private const val PROXY_AUTHORIZATION_HEADER = "Proxy-Authorization"
+        private const val SHUTDOWN_TIMEOUT_IN_MILLISECONDS = 5000L
+
+        private val CHALLENGE = rawHttpResponse(
+            statusLine = "HTTP/1.1 407 Proxy Authentication Required",
+            headers = listOf("Proxy-Authenticate: Basic realm=\"test\""),
+            body = EMPTY,
+        )
+
+        private val SUCCESS = rawHttpResponse(
+            statusLine = "HTTP/1.1 200 OK",
+            headers = listOf("Content-Type: text/plain"),
+            body = "proxied",
+        )
+    }
+}
 
 internal class DefaultHttpClientKtTest : MockServerTestCase<WireMockServer> by WireMockServerCreator() {
 
@@ -241,6 +345,86 @@ internal class DefaultHttpClientKtTest : MockServerTestCase<WireMockServer> by W
                     getRequestedFor(urlEqualTo("/test"))
                         .withHeader("multi-value-key", equalTo("value1,value2"))
                 )
+            }
+        }
+
+        @Test
+        fun `proxyUsername and proxyPassword - fails fast when the client cannot carry an authenticator`() {
+            runTest {
+                // given
+                // Credentials silently doing nothing would mean every direct fetch coming back as 407, so an
+                // unsupported client is rejected at construction rather than at request time.
+                val notAnOkHttpClient = Call.Factory { throw IllegalStateException("should not be called") }
+
+                // when
+                val result = assertThrows<IllegalStateException> {
+                    DefaultHttpClient(
+                        okhttpClient = notAnOkHttpClient,
+                        proxyUsername = "user",
+                        proxyPassword = "pass",
+                        isTestContext = true,
+                    )
+                }
+
+                // then
+                assertThat(result).hasMessage("Proxy credentials are only supported by the default OKHTTP based client.")
+            }
+        }
+
+        @Test
+        fun `proxyUsername and proxyPassword - answers an HTTP 407 challenge with the credentials`() {
+            runTest {
+                // given
+                // The target host does not resolve on purpose: reaching it at all proves the request went
+                // through the proxy instead of being sent directly.
+                val credentials = Credentials.basic("proxyuser", "proxypass")
+
+                AuthenticatingProxy(expectedCredentials = credentials).use { proxyServer ->
+                    val client = DefaultHttpClient(
+                        proxy = proxyServer.proxy,
+                        proxyUsername = "proxyuser",
+                        proxyPassword = "proxypass",
+                        isTestContext = true,
+                    )
+
+                    // when
+                    val result = client.get(URI("http://proxy-auth.test/anime/1535").toURL())
+
+                    // then
+                    assertThat(result.code).isEqualTo(200)
+                    assertThat(result.bodyAsString()).isEqualTo("proxied")
+                    assertThat(proxyServer.receivedCredentials).containsExactly(EMPTY, credentials)
+                    assertThat(proxyServer.requestLines).containsOnly("GET http://proxy-auth.test/anime/1535 HTTP/1.1")
+                }
+            }
+        }
+
+        @Test
+        fun `proxyUsername and proxyPassword - stops instead of replaying credentials the proxy rejected`() {
+            runTest {
+                // given
+                // A proxy which refuses the credentials it was given must end the request, because answering
+                // every HTTP 407 with the same header again is an endless exchange.
+                val credentials = Credentials.basic("proxyuser", "proxypass")
+
+                AuthenticatingProxy(
+                    expectedCredentials = credentials,
+                    rejectValidCredentials = true,
+                ).use { proxyServer ->
+                    val client = DefaultHttpClient(
+                        proxy = proxyServer.proxy,
+                        proxyUsername = "proxyuser",
+                        proxyPassword = "proxypass",
+                        isTestContext = true,
+                    )
+
+                    // when
+                    val result = client.get(URI("http://proxy-auth.test/anime/1535").toURL())
+
+                    // then
+                    assertThat(result.code).isEqualTo(407)
+                    assertThat(proxyServer.receivedCredentials).containsExactly(EMPTY, credentials)
+                }
             }
         }
 

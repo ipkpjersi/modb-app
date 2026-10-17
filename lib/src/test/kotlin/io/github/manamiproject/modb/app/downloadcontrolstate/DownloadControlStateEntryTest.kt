@@ -135,7 +135,7 @@ internal class DownloadControlStateEntryTest {
 
         @ParameterizedTest
         @EnumSource(value = AnimeStatus::class, mode = EXCLUDE, names = ["ONGOING", "UPCOMING"])
-        fun `if the anime didn't change repeatedly expand waiting time for 12 weeks maximum`(status: AnimeStatus) {
+        fun `if the anime didn't change repeatedly expand waiting time by the weeks without change`(status: AnimeStatus) {
             // given
             val anime = AnimeRaw(
                 _title = "title",
@@ -154,7 +154,32 @@ internal class DownloadControlStateEntryTest {
             // then
             assertThat(result.weeksWihoutChange).isEqualTo(13)
             assertThat(result.lastDownloaded).isEqualTo(WeekOfYear.currentWeek())
-            assertThat(result.nextDownload.week).isEqualTo(WeekOfYear.currentWeek().plusWeeks(12).week)
+            assertThat(result.nextDownload.week).isEqualTo(WeekOfYear.currentWeek().plusWeeks(13).week)
+            assertThat(result.anime).isEqualTo(anime)
+        }
+
+        @ParameterizedTest
+        @EnumSource(value = AnimeStatus::class, mode = EXCLUDE, names = ["ONGOING", "UPCOMING"])
+        fun `if the anime didn't change repeatedly expand waiting time for 26 weeks maximum`(status: AnimeStatus) {
+            // given
+            val anime = AnimeRaw(
+                _title = "title",
+                status = status,
+            )
+            val downloadControlStateEntry = DownloadControlStateEntry(
+                _weeksWihoutChange = 30,
+                _lastDownloaded = WeekOfYear.currentWeek().minusWeeks(4),
+                _nextDownload = WeekOfYear.currentWeek(),
+                _anime = anime,
+            )
+
+            // when
+            val result = downloadControlStateEntry.update(anime)
+
+            // then
+            assertThat(result.weeksWihoutChange).isEqualTo(34)
+            assertThat(result.lastDownloaded).isEqualTo(WeekOfYear.currentWeek())
+            assertThat(result.nextDownload.week).isEqualTo(WeekOfYear.currentWeek().plusWeeks(26).week)
             assertThat(result.anime).isEqualTo(anime)
         }
 

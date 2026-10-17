@@ -19,6 +19,9 @@ import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withTimeout
+import java.net.InetSocketAddress
+import java.net.Proxy
+import java.net.Proxy.Type.HTTP
 import java.net.URI
 import java.net.URL
 import java.util.concurrent.ConcurrentHashMap
@@ -52,6 +55,10 @@ internal class FlaresolverrHttpClient(
         // can draw a new address.
         retryServerErrors = false,
     ),
+    // Only set by tests, so the direct path can be exercised without a real proxy. Production leaves this
+    // null and builds one client per session instead, because the sticky credentials change with every
+    // session and the clearance cookie is only valid for the address those credentials select.
+    private val directHttpClient: HttpClient? = null,
 ): HttpClient {
 
     private val flaresolverrUrl: URL = URI("http://localhost:$port/v1").toURL()
@@ -111,7 +118,7 @@ internal class FlaresolverrHttpClient(
     override suspend fun get(
         url: URL,
         headers: Map<String, Collection<String>>,
-    ): HttpResponse = sendToFlaresolverr(url) { session ->
+    ): HttpResponse = sendToFlaresolverr(url, allowDirectFetch = true) { session ->
         """
             {
               "cmd": "request.get",
@@ -184,6 +191,8 @@ internal class FlaresolverrHttpClient(
     private suspend fun recycleSession(hostname: Hostname, servedAfterRecycle: Int) {
         endpoint.sessionCreationMutex.withLock {
             endpoint.requestCounts.computeIfAbsent(hostname) { AtomicInteger() }.set(servedAfterRecycle)
+
+            endpoint.clearances.remove(hostname)
 
             val session = endpoint.sessions.remove(hostname) ?: return@withLock
 
@@ -262,9 +271,9 @@ internal class FlaresolverrHttpClient(
         var attempt = 1
 
         while (true) {
-            val session = createOneSession(hostname)
+            val (session, proxySessionId) = createOneSession(hostname)
 
-            if (!needsWarmUp(hostname) || warmUp(hostname, session)) {
+            if (!needsWarmUp(hostname) || warmUp(hostname, session, proxySessionId)) {
                 return session
             }
 
@@ -306,7 +315,7 @@ internal class FlaresolverrHttpClient(
      * Deliberately requests the site root: it carries the same challenge as any other page while being the
      * cheapest thing to fetch, and its content is discarded either way.
      */
-    private suspend fun warmUp(hostname: Hostname, session: String): Boolean {
+    private suspend fun warmUp(hostname: Hostname, session: String, proxySessionId: String): Boolean {
         val targetUrl = "https://$hostname/"
 
         val content = try {
@@ -327,9 +336,122 @@ internal class FlaresolverrHttpClient(
 
         if (content.isOk()) {
             log.info { "Warmed up the FlareSolverr session for [$hostname] - Cloudflare cleared on this exit IP." }
+            rememberClearance(hostname, session, proxySessionId, content)
         }
 
         return content.isOk()
+    }
+
+    /**
+     * Keeps the Cloudflare clearance this warm-up just earned, so the rest of the session's requests can be
+     * fetched without the browser.
+     *
+     * What Cloudflare checks on a cleared request is the clearance cookie, the exit IP it was issued to and
+     * the user agent that solved it - not that a browser is making the request. Holding those three lets a
+     * plain HTTP client fetch the remaining pages of this session, which is worth doing because the browser
+     * also loads every stylesheet, font and thumbnail on the page and this crawl keeps none of them: 534 KB
+     * of metered residential traffic per anidb page against 32 KB fetched directly (measured 2026-10-16).
+     *
+     * Dropped again whenever the session is recycled or destroyed, because the next session draws a different
+     * exit IP and the cookie is bound to the old one.
+     */
+    private fun rememberClearance(
+        hostname: Hostname,
+        session: String,
+        proxySessionId: String,
+        content: FlaresolverrResponse,
+    ) {
+        if (!commercialProxyConfig.allowsDirectFetch(hostname)) {
+            return
+        }
+
+        val cookieHeader = content.solution.cookies
+            .filter { it.name.isNotBlank() }
+            .joinToString("; ") { "${it.name}=${it.value}" }
+
+        if (cookieHeader.isBlank() || content.solution.userAgent.isBlank()) {
+            log.warn { "FlareSolverr returned no usable clearance for [$hostname], so its requests keep going through the browser." }
+            return
+        }
+
+        // A proxy URL this client cannot use on its own is a reason to keep using the browser, not to end
+        // the run, so a failure to build the direct client is logged and the clearance simply not kept.
+        // Under test only an injected client is used, because a real one would reach for the network.
+        val client = directHttpClient
+            ?: when {
+                appConfig.isTestContext() -> return
+                else -> runCatching { directHttpClientFor(proxySessionId) }
+                    .onFailure { log.warn { "Cannot fetch [$hostname] without the browser: [${it.message}]" } }
+                    .getOrNull() ?: return
+            }
+
+        endpoint.clearances[hostname] = SessionClearance(
+            session = session,
+            cookieHeader = cookieHeader,
+            userAgent = content.solution.userAgent,
+            httpClient = client,
+        )
+    }
+
+    /**
+     * A plain HTTP client which exits through the same sticky proxy session as [proxySessionId], so a request
+     * it sends arrives from the address the clearance cookie was issued to.
+     */
+    private fun directHttpClientFor(proxySessionId: String): HttpClient {
+        val (host, port) = commercialProxyConfig.proxyHostAndPort()
+        val (user, pass) = commercialProxyConfig.credentials(proxySessionId)
+
+        return DefaultHttpClient(
+            proxy = Proxy(HTTP, InetSocketAddress(host, port)),
+            proxyUsername = user,
+            proxyPassword = pass,
+            isTestContext = appConfig.isTestContext(),
+        )
+    }
+
+    /**
+     * Fetches [targetUrl] with the session's stored clearance instead of the browser, or returns `null` to
+     * leave the request to FlareSolverr.
+     *
+     * Returns `null` rather than throwing on every doubt - no clearance, a clearance belonging to a session
+     * which has since been recycled, an unusable status, an empty body, or any transport fault. The browser
+     * path then runs exactly as it did before, so the worst case of this whole mechanism is the bandwidth it
+     * was meant to save. Only a cancellation propagates, because swallowing one breaks structured concurrency.
+     *
+     * HTTP 404 counts as usable: anidb answers a removed entry that way and
+     * [io.github.manamiproject.modb.anidb.AnidbDownloader] reads the body to record it as a dead entry.
+     */
+    private suspend fun directGet(hostname: Hostname, targetUrl: URL, session: String): FlaresolverrResponse? {
+        val clearance = endpoint.clearances[hostname]?.takeIf { it.session == session } ?: return null
+
+        val response = try {
+            clearance.httpClient.get(
+                url = targetUrl,
+                headers = mapOf(
+                    "user-agent" to listOf(clearance.userAgent),
+                    "cookie" to listOf(clearance.cookieHeader),
+                ),
+            )
+        } catch (throwable: Throwable) {
+            if (throwable is CancellationException) {
+                throw throwable
+            }
+
+            log.warn { "Direct request for [$targetUrl] failed - [${throwable.message}]. Falling back to the browser." }
+            return null
+        }
+
+        val body = response.bodyAsString()
+
+        if (!USABLE_DIRECT_STATUS_CODES.contains(response.code) || body.isBlank()) {
+            log.warn { "Direct request for [$targetUrl] returned status [${response.code}] and [${body.length}] character(s). Falling back to the browser." }
+            return null
+        }
+
+        return FlaresolverrResponse(
+            status = FLARESOLVERR_STATUS_OK,
+            solution = FlaresolverrResponseSolution(status = response.code, response = body),
+        )
     }
 
     /**
@@ -342,7 +464,7 @@ internal class FlaresolverrHttpClient(
      * The tunnel and commercial sets are mutually exclusive (enforced by checkCommercialProxy), so at most one
      * branch matches.
      */
-    private suspend fun createOneSession(hostname: Hostname): String {
+    private suspend fun createOneSession(hostname: Hostname): Pair<String, String> {
         // The session id is generated here rather than inside proxyJson so the same value can be logged. The
         // log is the only place it is ever visible: it is embedded in the proxy credentials, and a provider
         // hands out a new exit IP precisely because it has not seen that id before.
@@ -375,7 +497,7 @@ internal class FlaresolverrHttpClient(
             logExitIp(hostname, content.session)
         }
 
-        return content.session
+        return content.session to sessionId
     }
 
     /**
@@ -385,13 +507,22 @@ internal class FlaresolverrHttpClient(
      * alone identifies which provider's request failed - the underlying [httpClient] only ever sees the opaque
      * `localhost:<port>/v1` endpoint and cannot attribute the failure to a provider.
      */
-    private suspend fun sendToFlaresolverr(targetUrl: URL, buildBody: (String) -> String): HttpResponse {
+    private suspend fun sendToFlaresolverr(
+        targetUrl: URL,
+        allowDirectFetch: Boolean = false,
+        buildBody: (String) -> String,
+    ): HttpResponse {
         val hostname = targetUrl.host.lowercase().removePrefix("www.")
 
         // Either a successful solution or an exception - withSessionRetry never hands back a failed response,
         // so there is no partially-filled solution to guard against here.
         val content = withSessionRetry(hostname) { session ->
-            execute(targetUrl.toString(), buildBody(session))
+            val direct = when {
+                allowDirectFetch -> directGet(hostname, targetUrl, session)
+                else -> null
+            }
+
+            direct ?: execute(targetUrl.toString(), buildBody(session))
         }
 
         return HttpResponse(
@@ -446,7 +577,10 @@ internal class FlaresolverrHttpClient(
 
         if (result.indicatesMissingSession()) {
             log.warn { "FlareSolverr session for [$hostname] is gone - [${result.message}]. Creating a new one and retrying once." }
-            endpoint.sessionCreationMutex.withLock { endpoint.sessions.remove(hostname) }
+            endpoint.sessionCreationMutex.withLock {
+                endpoint.clearances.remove(hostname)
+                endpoint.sessions.remove(hostname)
+            }
 
             return block(sessionFor(hostname)).orThrow(hostname)
         }
@@ -504,6 +638,7 @@ internal class FlaresolverrHttpClient(
             endpoint.sessions.forEach { (hostname, session) -> destroySession(hostname, session) }
             endpoint.sessions.clear()
             endpoint.requestCounts.clear()
+            endpoint.clearances.clear()
         }
     }
 
@@ -537,6 +672,15 @@ internal class FlaresolverrHttpClient(
 
         /** Service used to resolve a session's exit IP. Returns the bare address as plain text. */
         private const val EXIT_IP_SERVICE = "https://api.ipify.org"
+
+        /** FlareSolverr's own value for a served request, reused when a direct fetch stands in for one. */
+        private const val FLARESOLVERR_STATUS_OK = "ok"
+
+        /**
+         * Status codes a direct fetch may return without falling back to the browser. 404 is included because
+         * anidb answers an entry it has removed that way, and the body still says so.
+         */
+        private val USABLE_DIRECT_STATUS_CODES = setOf(200, 404)
 
         private val EXIT_IP_PATTERN = Regex("""\b(?:\d{1,3}\.){3}\d{1,3}\b""")
 
@@ -584,7 +728,22 @@ private class FlaresolverrEndpoint(maxConcurrency: Int) {
 
     /** Last resolved exit IP per provider, so a rotation can be logged as a change rather than a bare value. */
     val exitIps = ConcurrentHashMap<Hostname, String>()
+
+    /** Cloudflare clearance of the current session per provider, where the direct path is available. */
+    val clearances = ConcurrentHashMap<Hostname, SessionClearance>()
 }
+
+/**
+ * Everything needed to fetch a page without the browser: the clearance cookie, the user agent it was issued
+ * to, and a client pinned to the exit IP that solved the challenge. Tied to the FlareSolverr session it came
+ * from, so a clearance left over from a recycled session is never reused against a different address.
+ */
+private data class SessionClearance(
+    val session: String,
+    val cookieHeader: String,
+    val userAgent: String,
+    val httpClient: HttpClient,
+)
 
 /**
  * Whether FlareSolverr served the request. Note that this is its own status and says nothing about the HTTP
@@ -634,4 +793,11 @@ private data class FlaresolverrResponse(
 private data class FlaresolverrResponseSolution(
     val status: Int = 100,
     val response: String = EMPTY,
+    val userAgent: String = EMPTY,
+    val cookies: List<FlaresolverrCookie> = emptyList(),
+)
+
+private data class FlaresolverrCookie(
+    val name: String = EMPTY,
+    val value: String = EMPTY,
 )

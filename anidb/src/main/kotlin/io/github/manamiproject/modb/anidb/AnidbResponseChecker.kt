@@ -1,5 +1,6 @@
 package io.github.manamiproject.modb.anidb
 
+import io.github.manamiproject.modb.core.config.AnimeId
 import io.github.manamiproject.modb.core.config.BooleanPropertyDelegate
 import io.github.manamiproject.modb.core.config.ConfigRegistry
 import io.github.manamiproject.modb.core.config.DefaultConfigRegistry
@@ -12,6 +13,20 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import java.awt.Desktop
 import java.net.URI
+
+/**
+ * Thrown when a response is a syntactically fine HTML page which is missing the anime data it should carry.
+ *
+ * Distinct from a network error, because the request succeeded: the browser simply captured the DOM before
+ * the page had finished rendering. On 2026-10-16 anidb id 396 was saved that way at 12,908 bytes against a
+ * 203 KB average, and re-fetching the same id minutes later returned a complete 243 KB page, so this is
+ * transient and worth one retry.
+ * @since 1.16.0
+ * @param id Id of the anime whose response was incomplete.
+ */
+public class IncompleteResponseException(id: AnimeId) : RuntimeException(
+    "Response for [anidbId=$id] is missing the anime info table - the page was most likely captured before it finished rendering."
+)
 
 /**
  * Thrown in case the crawler has been detected.
@@ -45,6 +60,7 @@ public class AnidbResponseChecker(
         extractor.extract(response, mapOf(
             "contentContainer" to "//div[@id='layout-content']//div[@class='container']/text()",
             "title" to "//title/text()",
+            "type" to "//tr[contains(@class, 'type')]//th[text()='Type']/following-sibling::*/text()",
         ))
     }}
 
@@ -74,6 +90,24 @@ public class AnidbResponseChecker(
      */
     public suspend fun isRemovedFromAnidb(): Boolean = withContext(LIMITED_CPU) {
         data.stringOrDefault("contentContainer").startsWith("Unknown anime id.")
+    }
+
+    /**
+     * Checks whether the response is missing the anime info table.
+     *
+     * Only meaningful once [isAdditionPending], [isHentai] and [isRemovedFromAnidb] have been ruled out:
+     * those three are legitimately served without the table. For anything else its absence means the page is
+     * not usable, and converting it would fail - which is how a single truncated capture took down the whole
+     * conversion pipeline on 2026-10-16.
+     *
+     * Uses the same expression [AnidbAnimeConverter] reads the type from, so this returns `true` exactly when
+     * the conversion would have no type to work with. Verified against the 6,645 complete pages of that run:
+     * every one carries it, and only the truncated capture did not.
+     * @since 1.16.0
+     * @return `true` if the response carries no anime info table.
+     */
+    public suspend fun isIncompletePage(): Boolean = withContext(LIMITED_CPU) {
+        data.stringOrDefault("type").isBlank()
     }
 
     /**

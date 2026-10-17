@@ -740,6 +740,237 @@ internal class FlaresolverrHttpClientTest {
             }
         }
     }
+
+    @Nested
+    inner class DirectFetchTests {
+
+        @Test
+        fun `fetches with the stored clearance instead of the browser once the session is warmed up`() {
+            runTest {
+                // given
+                val flaresolverr = clearedFlaresolverrStub()
+                val directHttpClient = DirectFetchStub(directResponse(code = 200, body = "<html>direct</html>"))
+                val commercialProxyConfig = CommercialProxyConfig(rotatingCommercialRegistry(
+                    url = "http://gw.example.com:7000",
+                    username = "user-{session}",
+                    password = "pass",
+                    rotateAfterRequests = 50,
+                    hostname = "directfetch1.example.com",
+                ))
+                val flaresolverrHttpClient = FlaresolverrHttpClient(
+                    appConfig = TestAppConfig,
+                    commercialProxyConfig = commercialProxyConfig,
+                    port = commercialProxyConfig.flaresolverrPort,
+                    httpClient = flaresolverr,
+                    directHttpClient = directHttpClient,
+                )
+                flaresolverrHttpClient.destroySessions()
+                flaresolverr.reset()
+
+                try {
+                    // when
+                    val result = flaresolverrHttpClient.get(URI("https://directfetch1.example.com/anime/1").toURL())
+
+                    // then
+                    // The browser still solves the challenge once, but the page itself never goes through it.
+                    assertThat(flaresolverr.warmUpRequests).hasSize(1)
+                    assertThat(flaresolverr.crawlRequests).isEmpty()
+                    assertThat(directHttpClient.requestedUrls).containsExactly("https://directfetch1.example.com/anime/1")
+                    assertThat(result.code).isEqualTo(200)
+                    assertThat(result.bodyAsString()).isEqualTo("<html>direct</html>")
+                } finally {
+                    flaresolverrHttpClient.destroySessions()
+                }
+            }
+        }
+
+        @Test
+        fun `sends the clearance cookie and the user agent which solved the challenge`() {
+            runTest {
+                // given
+                val flaresolverr = clearedFlaresolverrStub()
+                val directHttpClient = DirectFetchStub(directResponse(code = 200, body = "<html>direct</html>"))
+                val commercialProxyConfig = CommercialProxyConfig(rotatingCommercialRegistry(
+                    url = "http://gw.example.com:7000",
+                    username = "user-{session}",
+                    password = "pass",
+                    rotateAfterRequests = 50,
+                    hostname = "directfetch2.example.com",
+                ))
+                val flaresolverrHttpClient = FlaresolverrHttpClient(
+                    appConfig = TestAppConfig,
+                    commercialProxyConfig = commercialProxyConfig,
+                    port = commercialProxyConfig.flaresolverrPort,
+                    httpClient = flaresolverr,
+                    directHttpClient = directHttpClient,
+                )
+                flaresolverrHttpClient.destroySessions()
+                flaresolverr.reset()
+
+                try {
+                    // when
+                    flaresolverrHttpClient.get(URI("https://directfetch2.example.com/anime/2").toURL())
+
+                    // then
+                    // Cloudflare binds the clearance to the user agent which earned it, so both have to match
+                    // the browser session exactly or the cookie is worthless.
+                    val sentHeaders = directHttpClient.sentHeaders.single()
+                    assertThat(sentHeaders["cookie"]).containsExactly("cf_clearance=token")
+                    assertThat(sentHeaders["user-agent"]).containsExactly("Mozilla/5.0 (test)")
+                } finally {
+                    flaresolverrHttpClient.destroySessions()
+                }
+            }
+        }
+
+        @Test
+        fun `falls back to the browser when the direct response is not usable`() {
+            runTest {
+                // given
+                val flaresolverr = clearedFlaresolverrStub()
+                val directHttpClient = DirectFetchStub(directResponse(code = 403, body = "blocked"))
+                val commercialProxyConfig = CommercialProxyConfig(rotatingCommercialRegistry(
+                    url = "http://gw.example.com:7000",
+                    username = "user-{session}",
+                    password = "pass",
+                    rotateAfterRequests = 50,
+                    hostname = "directfetch3.example.com",
+                ))
+                val flaresolverrHttpClient = FlaresolverrHttpClient(
+                    appConfig = TestAppConfig,
+                    commercialProxyConfig = commercialProxyConfig,
+                    port = commercialProxyConfig.flaresolverrPort,
+                    httpClient = flaresolverr,
+                    directHttpClient = directHttpClient,
+                )
+                flaresolverrHttpClient.destroySessions()
+                flaresolverr.reset()
+
+                try {
+                    // when
+                    val result = flaresolverrHttpClient.get(URI("https://directfetch3.example.com/anime/3").toURL())
+
+                    // then
+                    // Saving bandwidth must never cost a page, so an unusable direct answer is discarded and
+                    // the browser fetches it after all.
+                    assertThat(directHttpClient.requestedUrls).hasSize(1)
+                    assertThat(flaresolverr.crawlRequests).hasSize(1)
+                    assertThat(result.bodyAsString()).isEqualTo("<html>browser</html>")
+                } finally {
+                    flaresolverrHttpClient.destroySessions()
+                }
+            }
+        }
+
+        @Test
+        fun `falls back to the browser when the direct request throws`() {
+            runTest {
+                // given
+                val flaresolverr = clearedFlaresolverrStub()
+                val directHttpClient = object : DirectFetchStub(directResponse(code = 200, body = EMPTY)) {
+                    override suspend fun get(url: URL, headers: Map<String, Collection<String>>): HttpResponse {
+                        super.get(url, headers)
+                        throw IllegalStateException("connection reset")
+                    }
+                }
+                val commercialProxyConfig = CommercialProxyConfig(rotatingCommercialRegistry(
+                    url = "http://gw.example.com:7000",
+                    username = "user-{session}",
+                    password = "pass",
+                    rotateAfterRequests = 50,
+                    hostname = "directfetch4.example.com",
+                ))
+                val flaresolverrHttpClient = FlaresolverrHttpClient(
+                    appConfig = TestAppConfig,
+                    commercialProxyConfig = commercialProxyConfig,
+                    port = commercialProxyConfig.flaresolverrPort,
+                    httpClient = flaresolverr,
+                    directHttpClient = directHttpClient,
+                )
+                flaresolverrHttpClient.destroySessions()
+                flaresolverr.reset()
+
+                try {
+                    // when
+                    val result = flaresolverrHttpClient.get(URI("https://directfetch4.example.com/anime/4").toURL())
+
+                    // then
+                    assertThat(directHttpClient.requestedUrls).hasSize(1)
+                    assertThat(flaresolverr.crawlRequests).hasSize(1)
+                    assertThat(result.bodyAsString()).isEqualTo("<html>browser</html>")
+                } finally {
+                    flaresolverrHttpClient.destroySessions()
+                }
+            }
+        }
+
+        @Test
+        fun `keeps using the browser when the warm-up produced no clearance`() {
+            runTest {
+                // given
+                // A FlareSolverr which reports no cookies, which is what every pre-direct-fetch version did.
+                val flaresolverr = FlaresolverrStub()
+                val directHttpClient = DirectFetchStub(directResponse(code = 200, body = "<html>direct</html>"))
+                val commercialProxyConfig = CommercialProxyConfig(rotatingCommercialRegistry(
+                    url = "http://gw.example.com:7000",
+                    username = "user-{session}",
+                    password = "pass",
+                    rotateAfterRequests = 50,
+                    hostname = "directfetch5.example.com",
+                ))
+                val flaresolverrHttpClient = FlaresolverrHttpClient(
+                    appConfig = TestAppConfig,
+                    commercialProxyConfig = commercialProxyConfig,
+                    port = commercialProxyConfig.flaresolverrPort,
+                    httpClient = flaresolverr,
+                    directHttpClient = directHttpClient,
+                )
+                flaresolverrHttpClient.destroySessions()
+                flaresolverr.reset()
+
+                try {
+                    // when
+                    flaresolverrHttpClient.get(URI("https://directfetch5.example.com/anime/5").toURL())
+
+                    // then
+                    assertThat(directHttpClient.requestedUrls).isEmpty()
+                    assertThat(flaresolverr.crawlRequests).hasSize(1)
+                } finally {
+                    flaresolverrHttpClient.destroySessions()
+                }
+            }
+        }
+
+        @Test
+        fun `does not fetch directly for a provider which is not routed through the commercial proxy`() {
+            runTest {
+                // given
+                val flaresolverr = clearedFlaresolverrStub()
+                val directHttpClient = DirectFetchStub(directResponse(code = 200, body = "<html>direct</html>"))
+                val flaresolverrHttpClient = FlaresolverrHttpClient(
+                    appConfig = TestAppConfig,
+                    tunnelConfig = TunnelConfig(enabledTunnelRegistry()),
+                    httpClient = flaresolverr,
+                    directHttpClient = directHttpClient,
+                )
+                flaresolverrHttpClient.destroySessions()
+                flaresolverr.reset()
+
+                try {
+                    // when
+                    flaresolverrHttpClient.get(URI("https://anidb.net/anime/6").toURL())
+
+                    // then
+                    // The tunnel has a single fixed address and is not metered, so there is nothing to save
+                    // and the clearance is deliberately not reused.
+                    assertThat(directHttpClient.requestedUrls).isEmpty()
+                    assertThat(flaresolverr.crawlRequests).hasSize(1)
+                } finally {
+                    flaresolverrHttpClient.destroySessions()
+                }
+            }
+        }
+    }
 }
 
 /**
@@ -835,6 +1066,7 @@ private fun rotatingCommercialRegistry(
     username: String,
     password: String,
     rotateAfterRequests: Int,
+    hostname: String = "anidb.net",
 ) = object : ConfigRegistry by TestConfigRegistry {
     override fun boolean(key: String): Boolean = true
     override fun string(key: String): String? = when {
@@ -848,7 +1080,8 @@ private fun rotatingCommercialRegistry(
     @Suppress("UNCHECKED_CAST")
     override fun <T : Any> list(key: String): List<T>? = when {
         // Per-provider now, so the threshold arrives as a 'hostname=limit' list rather than a bare int.
-        key.endsWith(".rotateAfterRequests") -> listOf("anidb.net=$rotateAfterRequests") as List<T>?
+        key.endsWith(".rotateAfterRequests") -> listOf("$hostname=$rotateAfterRequests") as List<T>?
+        key.endsWith(".providersForCommercialProxy") -> listOf(hostname) as List<T>
         else -> null
     }
 }
@@ -865,3 +1098,34 @@ private fun enabledCommercialRegistry(url: String) = object : ConfigRegistry by 
 }
 
 private val SITE_ROOT_URL = Regex("\"url\"\\s*:\\s*\"https?://[^/\"]+/\"")
+
+
+/**
+ * A [FlaresolverrStub] whose warm-up hands back a Cloudflare clearance - the cookie plus the user agent that
+ * earned it - so the direct path has something to work with. Crawl requests answer with a body which tells
+ * the browser path apart from the direct one in assertions.
+ */
+private fun clearedFlaresolverrStub() = object : FlaresolverrStub() {
+    override fun onRequest(body: String): HttpResponse = when {
+        isWarmUp(body) -> ok("""{"status":"ok","solution":{"status":200,"response":"<html></html>","userAgent":"Mozilla/5.0 (test)","cookies":[{"name":"cf_clearance","value":"token"}]}}""")
+        else -> ok("""{"status":"ok","solution":{"status":200,"response":"<html>browser</html>"}}""")
+    }
+}
+
+private fun directResponse(code: Int, body: String) = HttpResponse(code = code, body = body.toByteArray())
+
+/**
+ * Stands in for the plain HTTP client which fetches a page with a stored clearance instead of the browser.
+ * Records what it was asked for so a test can assert the cookie and user agent travelled with the request.
+ */
+private open class DirectFetchStub(private val response: HttpResponse): HttpClient by TestHttpClient {
+
+    val requestedUrls = mutableListOf<String>()
+    val sentHeaders = mutableListOf<Map<String, Collection<String>>>()
+
+    override suspend fun get(url: URL, headers: Map<String, Collection<String>>): HttpResponse {
+        requestedUrls.add(url.toString())
+        sentHeaders.add(headers)
+        return response
+    }
+}

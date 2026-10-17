@@ -20,9 +20,9 @@ import io.github.manamiproject.modb.core.anime.AnimeType.UNKNOWN as UNKNOWN_TYPE
  * If an anime hasn't changed repeatedly, it will be downloaded in the number of weeks without changes up to this point.
  * Changes are examined by checking all properties with the exception of [AnimeRaw.scores] and [AnimeRaw.activateChecks].
  *
- * **Example:** If there haven't been any changes after 3 weeks, it will be downloaded again in 6 weeks. This is limited
- * to 12 weeks. The time until the next download takes place cannot exceed 12 weeks, because every anime must be
- * downloaded from each metadata provider at least once per quarter.
+ * **Example:** If there haven't been any changes after 3 weeks, it will be downloaded again in 6 weeks. This is
+ * limited to [MAX_WEEKS_BETWEEN_DOWNLOADS] weeks, so every anime is downloaded from each metadata provider at
+ * least twice a year even if it never changes again.
  * Anime in a DCS entry are always bound to a specific metadata provider. Merging takes place in a later step.
  * @since 1.0.0
  * @property _weeksWihoutChange Number of weeks in which the anime has been downloaded without any changes.
@@ -179,10 +179,32 @@ data class DownloadControlStateEntry(
             else -> {
                 _weeksWihoutChange += _lastDownloaded.difference(_nextDownload)
                 _lastDownloaded = WeekOfYear.currentWeek()
-                val waitingTime = if (_weeksWihoutChange > 12) 12 else _weeksWihoutChange
+                val waitingTime = when {
+                    _weeksWihoutChange > MAX_WEEKS_BETWEEN_DOWNLOADS -> MAX_WEEKS_BETWEEN_DOWNLOADS
+                    else -> _weeksWihoutChange
+                }
                 _nextDownload = WeekOfYear.currentWeek().plusWeeks(waitingTime)
             }
         }
+    }
+
+    private companion object {
+
+        /**
+         * Longest gap allowed between two downloads of the same anime from the same metadata provider, in
+         * weeks, however long it has gone without changing.
+         *
+         * This is the single biggest lever on recurring bandwidth, because an entry which never changes is
+         * re-downloaded at this interval forever. Raised from 12 on 2026-10-16: at 12 weeks the anidb seed of
+         * roughly 15,450 entries is re-fetched about 4.1 times a year, which the crawl log and the ~173
+         * downloads per day needed to keep every entry inside its window both agree on. Doubling the gap
+         * halves that, and anything which actually changes is unaffected - a change resets the counter and
+         * schedules the next download for the following week.
+         *
+         * The cost is staleness, bounded by this value, on entries which have already proven stable across
+         * several downloads.
+         */
+        private const val MAX_WEEKS_BETWEEN_DOWNLOADS = 26
     }
 
     private fun isEqualIgnoringMetaDataProviderScore(other: AnimeRaw): Boolean {

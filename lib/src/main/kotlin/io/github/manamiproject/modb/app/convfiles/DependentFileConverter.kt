@@ -10,6 +10,7 @@ import io.github.manamiproject.modb.core.extensions.*
 import io.github.manamiproject.modb.core.json.Json
 import io.github.manamiproject.modb.core.logging.LoggerDelegate
 import io.github.manamiproject.modb.core.anime.AnimeRaw
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.withContext
@@ -71,7 +72,7 @@ class DependentFileConverter @KoverIgnore constructor(
             .forEach { chunk ->
                 val jobs = chunk.map {
                     async {
-                        convertFileToConvFile(it)
+                        convertOne(it)
                     }
                 }
 
@@ -79,6 +80,27 @@ class DependentFileConverter @KoverIgnore constructor(
             }
 
         log.info { "Finished converting unconverted files for [${metaDataProviderConfig.hostname()}]." }
+    }
+
+    /**
+     * Converts one file, keeping a failure to that file.
+     *
+     * awaitAll fails the whole batch as soon as any job throws, so without this a single unconvertible file
+     * would abort the catch-up pass and leave every later file in the chunk unconverted - the same way one
+     * truncated anidb page stopped conversion for a whole run on 2026-10-16. A file which cannot be converted
+     * is left without its conv file, so a later run tries it again.
+     */
+    private suspend fun convertOne(file: RegularFile) {
+        try {
+            convertFileToConvFile(file)
+        } catch (throwable: Throwable) {
+            // A cancellation is the run shutting down, not a bad file, so it has to propagate.
+            if (throwable is CancellationException) {
+                throw throwable
+            }
+
+            log.error { "Unable to convert [${file.fileName()}] for [${metaDataProviderConfig.hostname()}], continuing with the remaining files: [${throwable.message}]" }
+        }
     }
 
     override suspend fun convertFileToConvFile(file: RegularFile) {

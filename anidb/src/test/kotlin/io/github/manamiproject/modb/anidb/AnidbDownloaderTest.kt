@@ -39,7 +39,7 @@ internal class AnidbDownloaderTest : MockServerTestCase<WireMockServer> by WireM
                         aResponse()
                             .withHeader("Content-Type", "text/html")
                             .withStatus(200)
-                            .withBody("<html></html>")
+                            .withBody("<html><body><table><tr class=\"type\"><th class=\"field\">Type</th><td class=\"value\">TV Series</td></tr></table></body></html>")
                     )
                 )
 
@@ -51,8 +51,44 @@ internal class AnidbDownloaderTest : MockServerTestCase<WireMockServer> by WireM
                 }
 
                 // then
-                assertThat(result).isEqualTo("<html></html>")
+                assertThat(result).isEqualTo("<html><body><table><tr class=\"type\"><th class=\"field\">Type</th><td class=\"value\">TV Series</td></tr></table></body></html>")
             }
+
+        @Test
+        fun `throws an exception if the response is a page without the anime info table`() {
+            runTest {
+                // given
+                val id = "11376"
+
+                val testConfig = object : MetaDataProviderConfig by TestMetaDataProviderConfig {
+                    override fun hostname(): Hostname = "localhost"
+                    override fun buildAnimeLink(id: AnimeId): URI = AnidbConfig.buildAnimeLink(id)
+                    override fun buildDataDownloadLink(id: String): URI = URI("http://${hostname()}:$port/anime/$id")
+                    override fun fileSuffix(): FileSuffix = AnidbConfig.fileSuffix()
+                }
+
+                serverInstance.stubFor(
+                    get(urlPathEqualTo("/anime/$id")).willReturn(
+                        aResponse()
+                            .withHeader("Content-Type", "text/html")
+                            .withStatus(200)
+                            .withBody("<html><body><h1 class=\"anime\">Anime: title</h1></body></html>")
+                    )
+                )
+
+                val downloader = AnidbDownloader(testConfig)
+
+                // when
+                val result = exceptionExpected<IncompleteResponseException> {
+                    downloader.download(id) {
+                        shouldNotBeInvoked()
+                    }
+                }
+
+                // then
+                assertThat(result).hasMessage("Response for [anidbId=11376] is missing the anime info table - the page was most likely captured before it finished rendering.")
+            }
+        }
         }
 
         @Test

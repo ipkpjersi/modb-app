@@ -45,7 +45,15 @@ public class AnidbDownloader(
                 EMPTY
             }
             responseChecker.isAdditionPending() -> ANIDB_PENDING_FILE_INDICATOR
-            else -> responseBody
+            else -> {
+                // Last of the checks on purpose: a pending, adults-only or removed entry is legitimately
+                // served without the info table, so only a page which is none of those is incomplete.
+                if (responseChecker.isIncompletePage()) {
+                    throw IncompleteResponseException(id)
+                }
+
+                responseBody
+            }
         }
     }
 

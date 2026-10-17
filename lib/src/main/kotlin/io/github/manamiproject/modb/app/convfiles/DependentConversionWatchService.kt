@@ -109,7 +109,7 @@ class DependentConversionWatchService(
                 .map { it.context() as Path }
                 .filter { hasValidSuffix(it) }
                 .filter { allFilesForConversionExist(it) }
-                .forEach { convertFile(it) }
+                .forEach { convertOne(it) }
 
             key.reset()
             key = watchService.longPoll()
@@ -128,6 +128,27 @@ class DependentConversionWatchService(
         }
 
         return allFilesExist
+    }
+
+    /**
+     * Converts one file, keeping a failure to that file.
+     *
+     * This loop is started with GlobalScope.launch, so an exception escaping it ends conversion for the rest
+     * of the run with nothing to restart it - see the note in [SimpleConversionWatchService.convertOne] for
+     * what that cost on 2026-10-16. A file which cannot be converted keeps no conv file, so the next run's
+     * convertUnconvertedFiles retries it.
+     */
+    private suspend fun convertOne(file: RegularFile) {
+        try {
+            convertFile(file)
+        } catch (throwable: Throwable) {
+            // A cancellation is the run shutting down, not a bad file, so it has to propagate.
+            if (throwable is CancellationException) {
+                throw throwable
+            }
+
+            log.error { "Unable to convert [${file.fileName}] for [${mainConfig.hostname()}], continuing with the remaining files: [${throwable.message}]" }
+        }
     }
 
     private suspend fun convertFile(file: RegularFile) {

@@ -5,6 +5,7 @@ import io.github.manamiproject.modb.anidb.AnidbDownloader
 import io.github.manamiproject.modb.anidb.AnidbDownloader.Companion.ANIDB_PENDING_FILE_INDICATOR
 import io.github.manamiproject.modb.anidb.AnidbResponseChecker
 import io.github.manamiproject.modb.anidb.CrawlerDetectedException
+import io.github.manamiproject.modb.anidb.IncompleteResponseException
 import io.github.manamiproject.modb.app.config.AppConfig
 import io.github.manamiproject.modb.app.config.Config
 import io.github.manamiproject.modb.app.crawlers.CappedIdRangeSelector
@@ -156,6 +157,24 @@ class AnidbCrawler(
                     }
                     AnidbResponseChecker(response).checkIfCrawlerIsDetected()
                     response
+                }
+                // A page captured before it finished rendering. Cheap to re-fetch and usually complete the
+                // second time (anidb id 396 came back at 243 KB minutes after being saved at 12,908 bytes),
+                // so one retry is worth more than losing the entry for a week. Saving it anyway is the one
+                // thing that must not happen: it converts to nothing and used to kill the conversion
+                // pipeline for the rest of the run.
+                e is IncompleteResponseException -> {
+                    log.warn { "Incomplete response for [${metaDataProviderConfig.hostname()}] id [$animeId] - retrying once. [${e.message}]" }
+
+                    try {
+                        downloader.download(animeId.toString()) {
+                            deadEntriesAccess.addDeadEntry(it, metaDataProviderConfig)
+                        }
+                    } catch (retried: IncompleteResponseException) {
+                        log.error { "Response for [${metaDataProviderConfig.hostname()}] id [$animeId] was incomplete twice - skipping it for this run. [${retried.message}]" }
+                        skipped.add(animeId)
+                        return
+                    }
                 }
                 // FlaresolverrHttpClient has already retried this once on a fresh session, and the session
                 // it started from had cleared Cloudflare during warm-up, so two separate exit IPs failed on

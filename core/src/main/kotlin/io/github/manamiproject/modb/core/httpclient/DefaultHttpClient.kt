@@ -53,6 +53,10 @@ import java.util.concurrent.TimeUnit.*
  * @property retryServerErrors Whether server-error status codes are retried by this client. **Default** is `true`.
  * Set to `false` when the caller has to read the error response body: the retry path closes the body before the
  * caller ever sees it, so an API which reports its own failures in the body of a 5xx cannot be understood.
+ * @property proxyUsername Username for a proxy which requires authentication. Must be set together with
+ * [proxyPassword]. **Default** is empty, which sends an unauthenticated proxy request.
+ * @property proxyPassword Password for a proxy which requires authentication. Must be set together with
+ * [proxyUsername]. **Default** is empty.
  */
 public class DefaultHttpClient(
     proxy: Proxy = NO_PROXY,
@@ -73,6 +77,8 @@ public class DefaultHttpClient(
     private val headerCreator: HeaderCreator = DefaultHeaderCreator.instance,
     private val bufferResponseBody: Boolean = true,
     private val retryServerErrors: Boolean = true,
+    private val proxyUsername: String = EMPTY,
+    private val proxyPassword: String = EMPTY,
 ) : HttpClient {
 
     private val retryBehavior: RetryBehavior = RetryBehavior()
@@ -86,6 +92,28 @@ public class DefaultHttpClient(
             ThrowableRetryCase { it is SocketTimeoutException },
             ThrowableRetryCase { it is SocketException },
         )
+
+        if (proxyUsername.isNotBlank() && proxyPassword.isNotBlank()) {
+            val currentClient = okhttpClient
+
+            check(currentClient is OkHttpClient) {
+                "Proxy credentials are only supported by the default OKHTTP based client."
+            }
+
+            // java.net.Proxy carries no credentials, so an authenticating proxy answers HTTP 407 until the
+            // client repeats the request with a Proxy-Authorization header. Returning null once that header
+            // is already present stops OKHTTP from replaying credentials the proxy has just rejected.
+            okhttpClient = currentClient.newBuilder()
+                .proxyAuthenticator { _, response ->
+                    when (response.request.header(PROXY_AUTHORIZATION_HEADER)) {
+                        null -> response.request.newBuilder()
+                            .header(PROXY_AUTHORIZATION_HEADER, Credentials.basic(proxyUsername, proxyPassword))
+                            .build()
+                        else -> null
+                    }
+                }
+                .build()
+        }
     }
 
     /**
@@ -302,6 +330,9 @@ public class DefaultHttpClient(
 
 
     public companion object {
+        /** Header an HTTP proxy expects the credentials in once it has answered with HTTP 407. */
+        private const val PROXY_AUTHORIZATION_HEADER = "Proxy-Authorization"
+
         private val log by LoggerDelegate()
 
         private fun mapHttpProtocols(protocols: Collection<HttpProtocol>): List<Protocol> {

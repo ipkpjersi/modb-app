@@ -9,6 +9,7 @@ import io.github.manamiproject.modb.core.coverage.KoverIgnore
 import io.github.manamiproject.modb.core.extensions.*
 import io.github.manamiproject.modb.core.logging.LoggerDelegate
 import io.github.manamiproject.modb.core.anime.AnimeRaw
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -70,7 +71,7 @@ class SimpleConversionWatchService @KoverIgnore constructor(
                 .forEach {
                     val file = dir.resolve(it)
                     waitWhileFileIsBeingWrittenAsync(file).join()
-                    fileConverter.convertFileToConvFile(file)
+                    convertOne(file)
                 }
 
             key.reset()
@@ -80,6 +81,30 @@ class SimpleConversionWatchService @KoverIgnore constructor(
 
     override suspend fun stop() = withContext(LIMITED_FS) {
         watchService.close()
+    }
+
+    /**
+     * Converts one file, keeping a failure to that file.
+     *
+     * This loop is the only thing converting downloaded files while a crawl runs, and it is started with
+     * GlobalScope.launch, so an exception escaping here ends it for the rest of the run with nothing to
+     * restart it: the crawl keeps downloading into a pipeline which has stopped writing, and the dataset is
+     * built from whatever had been converted up to that point. On 2026-10-16 one truncated anidb page did
+     * exactly that, and 1,575 entries downloaded over the following two and a half hours were never
+     * converted. A file which cannot be converted is left without its conv file, so the next run's
+     * convertUnconvertedFiles retries it.
+     */
+    private suspend fun convertOne(file: RegularFile) {
+        try {
+            fileConverter.convertFileToConvFile(file)
+        } catch (throwable: Throwable) {
+            // A cancellation is the run shutting down, not a bad file, so it has to propagate.
+            if (throwable is CancellationException) {
+                throw throwable
+            }
+
+            log.error { "Unable to convert [${file.fileName()}] for [${metaDataProviderConfig.hostname()}], continuing with the remaining files: [${throwable.message}]" }
+        }
     }
 
     private suspend fun deleteLocks() {
